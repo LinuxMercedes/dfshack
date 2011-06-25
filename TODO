@@ -1,0 +1,10 @@
+Official stuff:
+
+Gripes:
+the <config> tag in configs is a really sucky name. 
+
+Ideas:
+Way to specify which users use dfshack
+Perhaps toggle dfshack off for users in /etc/password?
+
+
