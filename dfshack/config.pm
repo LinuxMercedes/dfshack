@@ -4,12 +4,14 @@ use strict;
 use Exporter;
 use vars qw($VERSION @ISA @EXPORT @EXPORT_OK);
 
+use File::Spec;
+
 $VERSION = 1.00;
 @ISA = qw(Exporter);
 @EXPORT = ();
 @EXPORT_OK = qw(read);
 
-my $homeconfig = "~/.dfshack/config";
+my $homeconfig = ".dfshack/config";
 my $globalconfig = "/etc/dfshack/config";
 
 sub read {
@@ -18,11 +20,10 @@ sub read {
 	my @readconfigs;
 
 	if(!$file) {
-		if(-e $homeconfig) {
-			$file = $homeconfig;
-		} elsif(-e $globalconfig) {
+		if(-e $globalconfig) {
 			$file = $globalconfig;
-		} else {
+		} 
+		else {
 			die "no config file found! $!\n";
 		}
 	}
@@ -30,19 +31,31 @@ sub read {
 	push $file, @readconfigs;
 	readconfig($file, $config);
 
+	# read custom user configuration
+	if($config->{'sourcedir'}) {
+		$homeconfig = File::Spec->join($config->{'sourcedir'}, $homeconfig);
+		if(-e $homeconfig) {
+			push $homeconfig, @readconfigs;
+			readconfig($homeconfig, $config);
+		}
+	}
+	else {
+		die "No sourcedir provided!\n";
+	}
+
 # read configs referenced in new config files,
 # making sure that we don't recursively read configs
-	while(grep ne $config{'config'}, @reaconfigs) {
-		if($config{'config'}) {
-			if(-e $config{'config'}) {
-				push $config{'config'}, @readconfigs;
-				readconfig($config{'config'}, $config);
-			} else {
-				warn "$config{'config'} not a valid file!\n";
+	while(!grep($config->{'config'},@readconfigs)  ) {
+		if($config->{'config'}) {
+			if(-e $config->{'config'}) {
+				push @readconfigs, $config->{'config'};
+				readconfig($config->{'config'}, $config);
+			} 
+			else {
+				warn "$config->{'config'} not a valid file!\n";
 			}
 		}
 	}
-
 	return $config;
 }
 

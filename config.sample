@@ -1,0 +1,12 @@
+# this is a comment
+
+# configs are processed in order of opening;
+# later config files take precedence over 
+# earlier ones. 
+
+# config importing isn't well done right now since I don't like it.
+config = /usr/share/dfshack.conf
+
+# user dfs directories location
+sourcedir = /mnt/dfs
+
