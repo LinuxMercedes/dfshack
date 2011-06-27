@@ -70,7 +70,7 @@ sub readconfig {
 		next if($line =~ /^\s?$/); #strip blank lines
 
 		#split lines based on <tag>=<value> #comment
-		my ($tag, $value) = split(/\s?(\w+)\s?=\s?([^#]+)/, $line);
+		my ($tag, $value) = split(/\s?([^=]+)\s?=\s?([^#]+)/, $line);
 		$config->{$tag} = $value;
 	}
 
