@@ -28,14 +28,14 @@ sub read {
 		}
 	}
 
-	push $file, @readconfigs;
+	push @readconfigs, $file;
 	readconfig($file, $config);
 
 	# read custom user configuration
 	if($config->{'sourcedir'}) {
 		$homeconfig = File::Spec->join($config->{'sourcedir'}, $homeconfig);
 		if(-e $homeconfig) {
-			push $homeconfig, @readconfigs;
+			push @readconfigs, $homeconfig ;
 			readconfig($homeconfig, $config);
 		}
 	}
@@ -81,3 +81,4 @@ sub readconfig {
 
 #return true
 "false";
+
