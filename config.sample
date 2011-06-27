@@ -10,3 +10,12 @@ config = /usr/share/dfshack.conf
 # user dfs directories location
 sourcedir = /mnt/dfs
 
+# file to write logs to
+log file = /var/log/dfshack.log
+
+# Detail of log messages
+#  0 = No log messages (not recommended)
+#  1 = Info
+#  2 = Warnings
+#  3 = Debug
+log level = 3
