@@ -2,44 +2,78 @@ package log;
 
 use strict;
 
-my $logh;
+use Log::Handler;
+use lib "./config.pm";
 
-my @levels = qw(None Info Warn Debug);
-
-sub new {
-  my $class = shift;
-  my $self = {};
-	
-	$self->{'logfile'} = shift || "/var/log/dfshack.log";
-	$self->{'maxlevel'} = shift || 3;
-
-  bless($self, $class);
-
-  if($self->{'logfile'}) {
-    &$self->openlog;
-  }
-
-  return $self;
-}
-
-sub openlog {
-  my $self = shift;
-  open($logh, '>>', $self->{'logfile'}) or die $!;
-}
-
-sub log {
-  my $self = shift;
-	my $mesg = shift || "\n";
-	my $level = shift || 1;
-
-	if($level <= $self->{'maxlevel'}) {
-		print $logh $levels[$level].": $mesg\n";
+sub get {
+	if(Log::Handler->exists_logger("dfshack")) {
+		return Log::Handler->get_logger("dfshack");
 	}
+	else {
+		return create();
+	}	
 }
 
-sub DESTROY {
-  my $self = shift;
+sub create {
+	my $config = config::read();
 
-  close($logh);
+	my $log = Log::Handler->create_logger("dfshack");
+
+	$log->add(
+		screen => {
+			log_to => "STDOUT",
+			maxlevel => "debug", 
+			minlevel => "debug",
+		},	
+	);
+
+	if($config->{'log file'}) {
+		$log->add(
+			file => {
+				maxlevel => 7,
+				minlevel => 0,
+
+				filename => $config->{'log file'},
+				filelock => 1,
+				fileopen => 1,
+				reopen => 1,
+				autoflush => 1,
+				permissions => "0660",
+				utf8 => 1,
+			},
+		);
+	}
+	else {
+		$log->add(
+			screen => {
+				maxlevel => 7,
+				minlevel => 0,
+
+				log_to => "STDERR",
+			},
+		);
+	}
+
+	$log->set_level(
+		my $alias => {
+			minlevel => $config->{'log minimum'},
+			maxlevel => $config->{'log maximum'},
+		}
+	);
+
+	return $log;
+}
+
+sub set_level {
+	my $min = shift;
+	my $max = shift;
+
+	my $log = get();
+	$log->set_level(
+		my $alias => {
+			minlevel => $min,
+			maxlevel => $max,
+		}
+	);
 }
 

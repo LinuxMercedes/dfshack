@@ -4,6 +4,12 @@
 # later config files take precedence over 
 # earlier ones. 
 
+# configs are read as such:
+#		/etc/dfshack/config
+#		Included config files
+#		<dfsdir>/<user>/.dfshack/config
+#		Included config files
+
 # config importing isn't well done right now since I don't like it.
 config = /usr/share/dfshack.conf
 
@@ -18,4 +24,6 @@ log file = /var/log/dfshack.log
 #  1 = Info
 #  2 = Warnings
 #  3 = Debug
-log level = 3
+log min = 0
+log max = 7
+
