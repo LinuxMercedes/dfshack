@@ -14,9 +14,15 @@ $VERSION = 1.00;
 my $homeconfig = ".dfshack/config";
 my $globalconfig = "/etc/dfshack/config";
 
+my $config = undef;
+my $configfile = undef;
+
 sub read {
 	my $file = shift || undef;
-	my $config;
+	
+	return $config if $config;
+	
+	$configfile = $file;
 	my @readconfigs;
 
 	if(!$file) {
@@ -56,6 +62,7 @@ sub read {
 			}
 		}
 	}
+	
 	return $config;
 }
 
@@ -77,6 +84,11 @@ sub readconfig {
 	close($fh);
 
 	return $config;
+}
+
+sub reload {
+	$config = undef;
+	return &read($configfile);
 }
 
 #return true
