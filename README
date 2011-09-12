@@ -3,12 +3,9 @@ dfshack--A hack built to make dfs look sorta like a "normal" linux filesystem.
 The point of dfshack is to allow software like KDE (which requires lockfiles) and Cadence (which requires special permissions on data files for god-knows-why) to coexist happily with dfs-mounted home directories. 
 Also, in theory this could be used to allow, say, key-based SSH auth to machines with dfs-mounted home directories as well. 
 
-dfshack works by mounting the dfs homedir somewhere else, then copying the files whose permissions need to be changed from their defaults to ~ and chmod'ing them. Files that can keep normal permissions are symlinked from the dfs dir to ~. 
-On logout, anything in ~ that's not a symlink is copied back to the dfs mount and then the dfs mount is unmounted. 
+dfshack works by proxying fs calls for the user's home directory to the dfs mount directory and modifying the results of the dfs directory based on some config files in which it stores custom permissions and symlinks.
 
-In the future I have plans to add support for persistent symlinks in ~ as well as "smart" (automatic) chmod'ing for new files. 
-
-Yes, this might work better as a FUSE driver, but I'm too lazy for that. 
+Yes, I know I said I was too lazy to write this as a FUSE driver, but it turns out that a giant rsync isn't exactly fast. C'est la vie. 
 
 Released under the MIT license: http://www.opensource.org/licenses/mit-license.php 
 
