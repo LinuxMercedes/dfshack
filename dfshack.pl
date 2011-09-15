@@ -25,4 +25,50 @@ sub debug{
 	print $string if $debug;
 }
 
-          
+sub d_getattr {
+	my $filename = shift;
+
+	debug("d_gettattr: " . $filename);
+
+	my @stats = lstat($file);
+	return -$! unless @list;
+	return @list;
+}
+
+sub d_getdir {
+	my $dirname = shift;
+
+	opendir(my $dir, $dirname) || return -ENOENT();
+
+	my @files = readdir($dir);
+	closedir($dir);
+	return (@files, 0);
+}
+
+sub d_open {
+	my $file = shift;
+	my $mode = shift;
+
+	sysopen(my $fh, $file, $mode) || return -$!;
+
+	close($fh);
+	return 0;
+}
+
+sub d_read {
+	my $file = shift;
+	my $bufsize = shift;
+	my $offset = shift;
+	my $rv = -ENOSYS();
+
+	return -ENOENT() unless -e($file); # = fixup($file)
+	
+	my $size = -s $file;
+
+	open(my $handle, $file) || return -ENOSYS();
+	if(seek($handle, $off, SEEK_SET)) {
+		read($handle, $rv, $bufsize);
+	}
+
+	return $rv;
+}
