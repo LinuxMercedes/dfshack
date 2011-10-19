@@ -13,7 +13,7 @@ my %extraopts = (
 		'debug' => 0,
 		);
 
-#my $dfsmount = "";
+my $dfsmount = "";
 my $mountpoint = "";
 my $pidfile = "";
 
@@ -24,10 +24,12 @@ GetOptions(
 		'use-threads' => sub {
 			$extraopts{'threaded'} = 0; # NO THREADS FOR YOU
 		},
-#		'dfs=s' => \$dfsmount,
+		'dfs=s' => \$dfsmount,
 		'mount=s' => \$mountpoint,
 		'pidfile=s' => \$pidfile,
 ) or die "could not parse options";
+
+my %symlinks = ();
 
 sub debug{
 	my $string = shift;
@@ -36,7 +38,7 @@ sub debug{
 
 sub fixup {
 	my $file = shift;
-	return "/tmp/fusetest-" . $ENV{LOGNAME} . $file;
+	return $dfsmount . $file;
 }
 
 sub d_getattr {
@@ -116,7 +118,7 @@ sub d_readlink {
 
 sub d_unlink {
 	print "unlink\n";
-	return unlink(fixup(shift)) ? 0 : -$!;
+#	return unlink(fixup(shift)) ? 0 : -$!;
 }
 
 sub d_symlink {
@@ -216,8 +218,16 @@ sub d_statfs {
 $mountpoint = shift(@ARGV) if @ARGV;
 
 if(! -d $mountpoint) {
-	print STDERR "ERROR: attempted to mount to nonexistent directory $mountpoint\n";
+	die "ERROR: attempted to mount to nonexistent directory $mountpoint\n";
 	return -ENOTDIR();
+}
+
+if(! -e $dfsmount ) {
+	die "Invalid dfs mount point $dfsmount\n";
+}
+
+if(! -d $dfsmount ) {
+	die "dfs mount $dfsmount is not a directory.\n";
 }
 
 my $pid = fork();
@@ -227,10 +237,17 @@ if($pid > 0) { #parent
 	exit(0);
 }
 
-if($pidfile) {
+if($pidfile) { # child
 	open(my $pfh, '>', $pidfile);
 	print $pfh $$, "\n";
 	close $pfh;
+}
+else { #failed to fork
+	die "Could not spawn fuse driver $!";
+}
+
+if(! -d "$dfs/.dfshack") {
+	mkdir("$dfs/.dfshack", 0700);
 }
 
 Fuse::main(
