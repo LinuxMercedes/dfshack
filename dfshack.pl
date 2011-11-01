@@ -4,8 +4,9 @@ use strict;
 use warnings;
 
 use Fuse;
-use POSIX qw(ENOENT ENOSYS ENOTDIR EEXIST EPERM O_RDONLY O_RDWR O_APPEND O_CREAT);
+use POSIX qw(ENOENT ENOSYS ENOTDIR EEXIST EPERM EAGAIN O_RDONLY O_RDWR O_APPEND O_CREAT);
 use Fcntl qw(S_ISBLK S_ISCHR S_ISFIFO SEEK_SET S_ISREG S_ISFIFO S_IMODE S_ISCHR S_ISBLK S_ISSOCK);
+use Time::HiRes qw(time tv_internal usleep);
 use Getopt::Long;
 
 my %extraopts = (
@@ -31,7 +32,50 @@ GetOptions(
 
 my %symlinks = ();
 
-sub debug{
+sub checklock {
+	my $lockfile = fixup(".dfshack/symlock");
+
+	my $start = time();
+	my $elapsed = tv_internal($start);
+
+	while((-e $lockfile) && $elapsed < 5) {
+		print $elapsed . "\n";
+		usleep(10_000); #Wait for .1 second
+	}
+
+	if(-e $lockfile) {
+		return -EAGAIN();
+	}
+
+	return undef;
+}
+
+sub readlink {
+	my $linkfile = fixup(".dfshack/symlinks");
+
+	my $rv = checklock();
+	return $rv if $rv;
+
+	%symlinks = ();
+
+	if(! -e $linkfile) {
+		return undef;
+	}
+
+	open(my $lfh, '<', $linkfile);
+
+	while(my $line = <$lfh>) {
+		if($line =~ /(.+)\t(.+)/) {
+			$symlinks{$1} = $2;
+		}
+	}
+
+	close($lfh);
+
+	return undef;
+}
+
+sub debug {
 	my $string = shift;
 	print $string if $extraopts{'debug'};
 }
@@ -246,8 +290,8 @@ else { #failed to fork
 	die "Could not spawn fuse driver $!";
 }
 
-if(! -d "$dfs/.dfshack") {
-	mkdir("$dfs/.dfshack", 0700);
+if(! -d fixup(".dfshack")) {
+	mkdir(fixup(".dfshack"), 0700);
 }
 
 Fuse::main(
