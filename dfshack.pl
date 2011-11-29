@@ -172,15 +172,16 @@ sub d_symlink {
 	return symlink(shift, fixup(shift)) ? 0 : -$!;
 }
 
+sub d_link {
+	print "hardlink\n";
+#	return link(fixup(shift), fixup(shift)) ? 0 : -$!;
+	return -ENOSYS();
+}
+
 sub d_rename {
 	my $old = fixup(shift);
 	my $new = fixup(shift);
   return rename($old, $new) ? 0 : -ENOENT();
-}
-
-sub d_link {
-	print "hardlink\n";
-	return link(fixup(shift), fixup(shift)) ? 0 : -$!;
 }
 
 sub d_chown {
