@@ -289,9 +289,6 @@ if($pidfile) { # child
 	print $pfh $$, "\n";
 	close $pfh;
 }
-else { #failed to fork
-	die "Could not spawn fuse driver $!";
-}
 
 if(! -d fixup(".dfshack")) {
 	mkdir(fixup(".dfshack"), 0700);
