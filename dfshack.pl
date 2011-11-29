@@ -31,9 +31,11 @@ GetOptions(
 ) or die "could not parse options";
 
 my %symlinks = ();
+my $symlinkupdate = undef;
 
 sub checklock {
-	my $lockfile = fixup(".dfshack/symlock");
+	my $lock = shift;
+	my $lockfile = fixup(".dfshack/.$lock");
 
 	my $start = time();
 	my $elapsed = tv_internal($start);
@@ -53,7 +55,7 @@ sub checklock {
 sub readlink {
 	my $linkfile = fixup(".dfshack/symlinks");
 
-	my $rv = checklock();
+	my $rv = checklock("symlink");
 	return $rv if $rv;
 
 	%symlinks = ();
