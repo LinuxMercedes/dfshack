@@ -67,7 +67,7 @@ sub readlink {
 	open(my $lfh, '<', $linkfile);
 
 	while(my $line = <$lfh>) {
-		if($line =~ /(.+)\t(.+)/) {
+		if($line =~ /(.+)\0(.+)/) {
 			$symlinks{$1} = $2;
 		}
 	}
