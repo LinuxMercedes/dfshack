@@ -6,7 +6,7 @@ use warnings;
 use Fuse;
 use POSIX qw(ENOENT ENOSYS ENOTDIR EEXIST EPERM EAGAIN O_RDONLY O_RDWR O_APPEND O_CREAT);
 use Fcntl qw(S_ISBLK S_ISCHR S_ISFIFO SEEK_SET S_ISREG S_ISFIFO S_IMODE S_ISCHR S_ISBLK S_ISSOCK);
-use Time::HiRes qw(time tv_internal usleep);
+use Time::HiRes qw(time tv_internal usleep stat);
 use Getopt::Long;
 
 my %extraopts = (
@@ -89,7 +89,32 @@ sub readfile {
 		}
 	}
 
-	close($lfh);
+	close($fh);
+
+	return undef;
+}
+
+sub writefile {
+	my $writetype = shift;
+	my $hash = shift;
+	my $modified = shift;
+
+	my $filename = fixup(".dfshack/$writetype");
+
+	my $rv = checklock($readtype);
+	return $rv if $rv;
+
+	if(-e $filename && ($$modified > (stat(_)[9]))) {
+		debug("WARNING: link file modified in the future?");
+	}
+
+	open(my $fh, '>', $filename);
+
+	while(my($k, $v) = each(%$hash)) {
+		print $fh $k . '\0' . $v;
+	}
+
+	close($fh);
 
 	return undef;
 }
