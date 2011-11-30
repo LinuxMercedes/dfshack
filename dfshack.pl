@@ -52,29 +52,50 @@ sub checklock {
 	return undef;
 }
 
-sub readlink {
-	my $linkfile = fixup(".dfshack/symlinks");
+sub readfile {
+	my $readtype = shift;
+	my $hash = shift;
+	my $modified = shift;
 
-	my $rv = checklock("symlink");
+	my $filename = fixup(".dfshack/$readtype");
+
+	if(! -e $filename) {
+		%$hash = ();
+		return undef;
+	}	
+	
+	my $rv = checklock($readtype);
 	return $rv if $rv;
 
-	%symlinks = ();
+	my $mtime = undef;
 
-	if(! -e $linkfile) {
-		return undef;
+	if($$modified) {
+		$mtime = (stat($filename))[9];
+		if($mtime == $$modified) {
+			return undef;
+		}
 	}
 
-	open(my $lfh, '<', $linkfile);
+	$mtime = (stat($filename))[9] unless $mtime;
+	$$modified = $mtime;
+	
+	%$hash = ();
 
-	while(my $line = <$lfh>) {
+	open(my $fh, '<', $filename);
+
+	while(my $line = <$fh>) {
 		if($line =~ /(.+)\0(.+)/) {
-			$symlinks{$1} = $2;
+			$hash->{$1} = $2;
 		}
 	}
 
 	close($lfh);
 
 	return undef;
+}
+
+sub readlinks {
+	return readfile("symlinks", \%symlinks, \$symlinkupdate);
 }
 
 sub debug {
