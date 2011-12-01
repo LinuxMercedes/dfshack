@@ -213,10 +213,19 @@ sub err {
 	return (-shift || -$!);
 }
 
-#copied straight out of the tutorial and probably wrong
 sub d_readlink {
 	print "readlink\n";
-	return readlink(fixup(shift));
+	my $result  = readlinks();
+
+# fail on readlinks() error
+	if($result) {
+		$! = $result;
+		return undef;
+	}
+
+	my $rv = $symlinks{shift};
+	$! = -ENOENT() unless $rv; # Is this right?
+	return $rv;
 }
 
 sub d_unlink {
