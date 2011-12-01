@@ -240,7 +240,21 @@ sub d_unlink {
 
 sub d_symlink {
 	print "symlink\n";
-	return symlink(shift, fixup(shift)) ? 0 : -$!;
+	my $old = shift;
+	my $new = shift;
+	if(-e fixup($old) || -e fixup($new) || $symlinks{$old} || $symlinks{$new}) {
+#		return -EEXISTS();
+		return 0; #fail
+	}
+
+	$symlinks{$old} = fixup($new);
+	my $rv = writelinks();
+	if($rv) {
+		delete $symlinks{$old};
+		return 0;
+	}
+
+	return 1;
 }
 
 sub d_link {
