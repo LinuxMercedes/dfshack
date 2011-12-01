@@ -59,16 +59,21 @@ sub readfile {
 
 	my $filename = fixup(".dfshack/$readtype");
 
+# No symlinks file -- we have nothing to read!
 	if(! -e $filename) {
 		%$hash = ();
 		return undef;
 	}	
 	
+# Check to see if we're busy writing; hang for a while
+# and then either carry on or fail
 	my $rv = checklock($readtype);
 	return $rv if $rv;
 
 	my $mtime = undef;
 
+# If we're already up-to-date, don't bother
+# reading the file.
 	if($$modified) {
 		$mtime = (stat($filename))[9];
 		if($mtime == $$modified) {
@@ -76,6 +81,7 @@ sub readfile {
 		}
 	}
 
+# Update the modified time
 	$mtime = (stat($filename))[9] unless $mtime;
 	$$modified = $mtime;
 	
@@ -83,6 +89,7 @@ sub readfile {
 
 	open(my $fh, '<', $filename);
 
+# Read the null-delimited file
 	while(my $line = <$fh>) {
 		if($line =~ /(.+)\0(.+)/) {
 			$hash->{$1} = $2;
@@ -117,6 +124,10 @@ sub writefile {
 	close($fh);
 
 	return undef;
+}
+
+sub writelinks {
+	return writefile("symlinks", \%symlinks, \$symlinkupdate);
 }
 
 sub readlinks {
