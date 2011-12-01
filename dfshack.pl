@@ -230,7 +230,12 @@ sub d_readlink {
 
 sub d_unlink {
 	print "unlink\n";
-#	return unlink(fixup(shift)) ? 0 : -$!;
+# Need to test unlink() to see how it behaves first
+# what does it do for cases where there are both
+# valid and invalid files?
+	my $result = delete $symlinks{shift};
+# set $! ?
+
 }
 
 sub d_symlink {
