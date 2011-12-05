@@ -251,10 +251,10 @@ sub d_symlink {
 		return 0; #fail
 	}
 
-	$symlinks{$old} = fixup($new);
+	$symlinks{$new} = fixup($old);
 	my $rv = writelinks();
 	if($rv) {
-		delete $symlinks{$old};
+		delete $symlinks{$new};
 		return 0;
 	}
 
