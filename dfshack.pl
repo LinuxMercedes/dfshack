@@ -108,12 +108,15 @@ sub writefile {
 
 	my $filename = fixup(".dfshack/$writetype");
 
-	my $rv = checklock($readtype);
+	my $rv = checklock($writetype);
 	return $rv if $rv;
 
 	if(-e $filename && ($$modified > (stat(_)[9]))) {
 		debug("WARNING: link file modified in the future?");
 	}
+
+	open(my $lock, '>', ".dfshack/.$writetype");
+	close($lock);
 
 	open(my $fh, '>', $filename);
 
@@ -122,6 +125,8 @@ sub writefile {
 	}
 
 	close($fh);
+
+	unlink(".dfshack/.$writetype");
 
 	return undef;
 }
