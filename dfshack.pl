@@ -220,15 +220,15 @@ sub err {
 
 sub d_readlink {
 	print "readlink\n";
-	my $result  = readlinks();
+	my $rv  = readlinks();
 
 # fail on readlinks() error
-	if($result) {
-		$! = $result;
+	if($rv) {
+		$! = $rv;
 		return undef;
 	}
 
-	my $rv = $symlinks{shift};
+	$rv = $symlinks{shift};
 	$! = -ENOENT() unless $rv; # Is this right?
 	return $rv;
 }
