@@ -6,17 +6,18 @@ use warnings;
 use Fuse;
 use POSIX qw(ENOENT ENOSYS ENOTDIR EEXIST EPERM EAGAIN O_RDONLY O_RDWR O_APPEND O_CREAT);
 use Fcntl qw(S_ISBLK S_ISCHR S_ISFIFO SEEK_SET S_ISREG S_ISFIFO S_IMODE S_ISCHR S_ISBLK S_ISSOCK);
-use Time::HiRes qw(time tv_internal usleep stat);
+use Time::HiRes qw(time gettimeofday tv_interval usleep);
 use Getopt::Long;
+use Lchown qw(lchown);
 
-my %extraopts = (
+our %extraopts = (
 		'threaded' => 0,
 		'debug' => 0,
 		);
 
-my $dfsmount = "";
-my $mountpoint = "";
-my $pidfile = "";
+our $dfsmount;
+our $mountpoint;
+our $pidfile;
 
 GetOptions(
 		'debug' => sub {
@@ -37,12 +38,13 @@ sub checklock {
 	my $lock = shift;
 	my $lockfile = fixup(".dfshack/.$lock");
 
-	my $start = time();
-	my $elapsed = tv_internal($start);
+	my $start = [gettimeofday];
+	my $elapsed = $start;
 
 	while((-e $lockfile) && $elapsed < 5) {
 		print $elapsed . "\n";
 		usleep(10_000); #Wait for .1 second
+		$elapsed = tv_interval($start);
 	}
 
 	if(-e $lockfile) {
@@ -111,7 +113,7 @@ sub writefile {
 	my $rv = checklock($writetype);
 	return $rv if $rv;
 
-	if(-e $filename && ($$modified > (stat(_)[9]))) {
+	if(-e $filename && ($$modified > (stat($filename))[9])) {
 		debug("WARNING: link file modified in the future?");
 	}
 
@@ -141,7 +143,7 @@ sub readlinks {
 
 sub debug {
 	my $string = shift;
-	print $string if $extraopts{'debug'};
+	print $string . "\n" if $extraopts{'debug'};
 }
 
 sub fixup {
@@ -161,6 +163,7 @@ sub d_getattr {
 
 sub d_getdir {
 	my $dirname = fixup(shift);
+	debug("d_getdir: " . $dirname);
 
 	opendir(my $dir, $dirname) || return -ENOENT();
 
@@ -172,6 +175,7 @@ sub d_getdir {
 sub d_open {
 	my $file = fixup(shift);
 	my $mode = shift;
+	debug("d_open: " . $file);
 
 	sysopen(my $fh, $file, $mode) || return -$!;
 
@@ -185,6 +189,7 @@ sub d_read {
 	my $offset = shift;
 	my $rv = -ENOSYS();
 
+	debug("d_read: " . $file);
 	return -ENOENT() unless -e($file); # = fixup($file)
 	
 	my $size = -s $file;
@@ -202,6 +207,7 @@ sub d_write {
 	my $buf = shift;
 	my $off = shift;
 	my $rv;
+	debug("d_write: " . $file);
 	return -ENOENT() unless -e($file); 
 	my $fsize = -s $file;
 
@@ -219,7 +225,9 @@ sub err {
 }
 
 sub d_readlink {
+	my $file = shift;
 	print "readlink\n";
+	debug("d_readlink: " . $file);
 	my $rv  = readlinks();
 
 # fail on readlinks() error
@@ -228,41 +236,50 @@ sub d_readlink {
 		return undef;
 	}
 
-	$rv = $symlinks{shift};
+	$rv = $symlinks{$file};
 	$! = -ENOENT() unless $rv; # Is this right?
 	return $rv;
 }
 
 sub d_unlink {
+	my $file = fixup(shift);
+	debug("d_unlink: " . $file);
 	print "unlink\n";
-	my $result = delete $symlinks{shift};
+	my $result = delete $symlinks{$file};
 	
   return 0 if $result;
 
-	return -ENOTEXIST();
+	local $!;
+	unlink($file);
+	return -$!;
 }
 
 sub d_symlink {
-	print "symlink\n";
 	my $old = shift;
 	my $new = shift;
-	if(-e fixup($old) || -e fixup($new) || $symlinks{$old} || $symlinks{$new}) {
+	debug("d_symlink: " . $old . " " . $new);
+	if(! -e fixup($old) || -e fixup($new) || $symlinks{$old} || $symlinks{$new}) {
 #		return -EEXISTS();
+		debug("d_symlink: something exists or doesn't");
 		return 0; #fail
 	}
 
 	$symlinks{$new} = fixup($old);
 	my $rv = writelinks();
 	if($rv) {
+		debug("d_symlink: failed to write link file");
 		delete $symlinks{$new};
 		return 0;
 	}
+
+	debug("d_symlink: success!");
 
 	return 1;
 }
 
 sub d_link {
 	print "hardlink\n";
+	debug("d_link: " . shift);
 #	return link(fixup(shift), fixup(shift)) ? 0 : -$!;
 	return -ENOSYS();
 }
@@ -270,6 +287,7 @@ sub d_link {
 sub d_rename {
 	my $old = fixup(shift);
 	my $new = fixup(shift);
+	debug("d_rename: " . $old . " " . $new);
   return rename($old, $new) ? 0 : -ENOENT();
 }
 
@@ -277,6 +295,8 @@ sub d_chown {
 	my $file = fixup(shift);
 	my $uid = shift;
 	my $gid = shift;
+	
+	debug("d_chown: " . $file);
 
 	local $!; #huh?
 	print "no file $file\n" unless -e $file;
@@ -288,6 +308,7 @@ sub d_chown {
 sub d_chmod {
 	my $file = fixup(shift);
 	my $mode = shift;
+	debug("d_chmod: " . $file);
 
 	return chmod($mode, $file) ? 0 : -$!;
 }
@@ -295,6 +316,7 @@ sub d_chmod {
 sub d_truncate {
 	my $file = fixup(shift);
 	my $length = shift;
+	debug("d_truncate: " . $file);
 
 	return truncate($file, $length) ? 0 : -$!;
 }
@@ -303,6 +325,7 @@ sub d_utime {
 	my $file = fixup(shift);
 	my $atime = shift;
 	my $utime = shift;
+	debug("d_utime: " . $file);
 
 	return utime($atime, $utime, $file) ? 0 : -$!;
 }
@@ -310,12 +333,14 @@ sub d_utime {
 sub d_mkdir {
 	my $file = fixup(shift);
 	my $perm = shift;
+	debug("d_mkdir: " . $file);
 
 	return mkdir($file, $perm) ? 0 : -$!;
 }
 
 sub d_rmdir {
 	my $file = fixup(shift);
+	debug("d_rmdir: " . $file);
 
 	return rmdir($file) ? 0 : -$!;
 }
@@ -325,6 +350,7 @@ sub d_mknod {
 	my $modes = shift;
 	my $dev = shift;
 
+	debug("d_mknod: " . $file);
 	undef $!;
 
 	if(S_ISREG($modes)) {
@@ -351,9 +377,9 @@ sub d_statfs {
 	return -ENOSYS(); #lol suckers
 }
 
-$mountpoint = shift(@ARGV) if @ARGV;
+$mountpoint = shift(@ARGV) if (!$mountpoint && @ARGV);
 
-if(! -d $mountpoint) {
+if(! -e "$mountpoint") {
 	die "ERROR: attempted to mount to nonexistent directory $mountpoint\n";
 	return -ENOTDIR();
 }
@@ -366,6 +392,7 @@ if(! -d $dfsmount ) {
 	die "dfs mount $dfsmount is not a directory.\n";
 }
 
+if(!$extraopts{'debug'}) {
 my $pid = fork();
 defined $pid or die "fork() failed: $!";
 
@@ -379,8 +406,10 @@ if($pidfile) { # child
 	close $pfh;
 }
 
-if(! -d fixup(".dfshack")) {
-	mkdir(fixup(".dfshack"), 0700);
+}
+
+if(! -d fixup("/.dfshack")) {
+	mkdir(fixup("/.dfshack"), 0777);
 }
 
 Fuse::main(
