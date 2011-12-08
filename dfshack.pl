@@ -9,6 +9,7 @@ use Fcntl qw(S_ISBLK S_ISCHR S_ISFIFO SEEK_SET S_ISREG S_ISFIFO S_IMODE S_ISCHR 
 use Time::HiRes qw(time gettimeofday tv_interval usleep);
 use Getopt::Long;
 use Lchown qw(lchown);
+use File::Basename;
 
 our %extraopts = (
 		'threaded' => 0,
@@ -108,10 +109,16 @@ sub writefile {
 	my $hash = shift;
 	my $modified = shift;
 
-	my $filename = fixup(".dfshack/$writetype");
+	my $filename = fixup("/.dfshack/$writetype");
+
+	debug("writefile: " . $filename);
 
 	my $rv = checklock($writetype);
 	return $rv if $rv;
+
+	if(-e $filename) {
+		debug("writefile: $filename exists");
+	}
 
 	if(-e $filename && ($$modified > (stat($filename))[9])) {
 		debug("WARNING: link file modified in the future?");
@@ -123,7 +130,7 @@ sub writefile {
 	open(my $fh, '>', $filename);
 
 	while(my($k, $v) = each(%$hash)) {
-		print $fh $k . '\0' . $v;
+		print $fh $k . "\0" . $v . "\n";
 	}
 
 	close($fh);
@@ -154,7 +161,7 @@ sub fixup {
 sub d_getattr {
 	my $file = fixup(shift);
 
-	debug("d_gettattr: " . $file);
+	debug("d_getattr: " . $file);
 
 	my @stats = lstat($file);
 	return -$! unless @stats;
@@ -257,14 +264,16 @@ sub d_unlink {
 sub d_symlink {
 	my $old = shift;
 	my $new = shift;
-	debug("d_symlink: " . $old . " " . $new);
-	if(! -e fixup($old) || -e fixup($new) || $symlinks{$old} || $symlinks{$new}) {
+	my $absold = dirname($new) . '/' . $old;
+
+	debug("d_symlink: " . $absold . " " . $new);
+	if(! -e fixup($absold) || -e fixup($new) || $symlinks{$old} || $symlinks{$new}) {
 #		return -EEXISTS();
 		debug("d_symlink: something exists or doesn't");
 		return 0; #fail
 	}
 
-	$symlinks{$new} = fixup($old);
+	$symlinks{$new} = $old;
 	my $rv = writelinks();
 	if($rv) {
 		debug("d_symlink: failed to write link file");
