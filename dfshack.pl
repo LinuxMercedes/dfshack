@@ -176,6 +176,11 @@ sub d_getdir {
 
 	my @files = readdir($dir);
 	closedir($dir);
+
+	foreach my $k (keys(%$symlinks)) {
+		push(@files, $k) if($k =~ /^$dirname/);
+	}
+
 	return (@files, 0);
 }
 
