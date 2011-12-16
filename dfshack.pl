@@ -209,11 +209,17 @@ sub d_getdir {
 }
 
 sub d_open {
-	my $file = fixup(shift);
+	my $file = shift;
 	my $mode = shift;
 	debug("d_open: " . $file);
 
-	sysopen(my $fh, $file, $mode) || return -$!;
+	if($symlinks{$file}) {
+		my $dir = dirname($file);
+		$file = $dir .  '/' . $symlinks{$file};
+		debug("d_open: " . $file);
+	}
+
+	sysopen(my $fh, fixup($file), $mode) || return -$!;
 
 	close($fh);
 	return 0;
