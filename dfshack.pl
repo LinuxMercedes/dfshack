@@ -192,16 +192,17 @@ sub d_getattr {
 }
 
 sub d_getdir {
-	my $dirname = fixup(shift);
+	my $dirname = shift;
 	debug("d_getdir: " . $dirname);
 
-	opendir(my $dir, $dirname) || return -ENOENT();
+	opendir(my $dir, fixup($dirname)) || return -ENOENT();
 
 	my @files = readdir($dir);
 	closedir($dir);
 
-	foreach my $k (keys(%$symlinks)) {
-		push(@files, $k) if($k =~ /^$dirname/);
+	foreach my $k (keys(%symlinks)) {
+		debug("d_getdir link: " . $k);
+		push(@files, basename($k)) if($k =~ /^$dirname/);
 	}
 
 	return (@files, 0);
