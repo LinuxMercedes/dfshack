@@ -32,12 +32,12 @@ GetOptions(
 		'pidfile=s' => \$pidfile,
 ) or die "could not parse options";
 
-my %symlinks = ();
-my $symlinkupdate = undef;
+our %symlinks = ();
+our $symlinkupdate = undef;
 
 sub checklock {
 	my $lock = shift;
-	my $lockfile = fixup(".dfshack/.$lock");
+	my $lockfile = fixup("/.dfshack/.$lock");
 
 	my $start = [gettimeofday];
 	my $elapsed = $start;
@@ -60,11 +60,14 @@ sub readfile {
 	my $hash = shift;
 	my $modified = shift;
 
-	my $filename = fixup(".dfshack/$readtype");
+	my $filename = fixup("/.dfshack/$readtype");
+	
+	debug("readfile: " . $filename);
 
 # No symlinks file -- we have nothing to read!
 	if(! -e $filename) {
 		%$hash = ();
+		debug("readfile: no file to read");
 		return undef;
 	}	
 	
@@ -80,6 +83,7 @@ sub readfile {
 	if($$modified) {
 		$mtime = (stat($filename))[9];
 		if($mtime == $$modified) {
+			debug("readfile: up-to-date");
 			return undef;
 		}
 	}
@@ -425,6 +429,8 @@ if($pidfile) { # child
 if(! -d fixup("/.dfshack")) {
 	mkdir(fixup("/.dfshack"), 0777);
 }
+
+readlinks();
 
 Fuse::main(
 		'mountpoint' => $mountpoint,
