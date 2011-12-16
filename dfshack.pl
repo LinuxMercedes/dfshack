@@ -10,6 +10,7 @@ use Time::HiRes qw(time gettimeofday tv_interval usleep);
 use Getopt::Long;
 use Lchown qw(lchown);
 use File::Basename;
+use Data::Dumper;
 
 our %extraopts = (
 		'threaded' => 0,
@@ -154,7 +155,8 @@ sub readlinks {
 
 sub debug {
 	my $string = shift;
-	print $string . "\n" if $extraopts{'debug'};
+	print $string . "\n" if($extraopts{'debug'} && $string);
+	print "nothing to print here\n" if($extraopts{'debug'});
 }
 
 sub fixup {
