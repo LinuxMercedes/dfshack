@@ -165,11 +165,28 @@ sub fixup {
 }
 
 sub d_getattr {
-	my $file = fixup(shift);
+	my $file = shift;
+	my @stats;
 
 	debug("d_getattr: " . $file);
 
-	my @stats = lstat($file);
+	if(my $link = $symlinks{$file}) {
+		@stats = lstat(fixup("/.dfshack/symlinks"));
+
+		my $linkfile = fixup(dirname($file) . '/' . $file);
+		if(-e $linkfile) {
+			my @lstats = lstat($linkfile);
+			$stats[9] = $lstats[9];
+			$stats[10] = $lstats[10];
+			$stats[11] = $lstats[11];
+		}
+
+		$stats[8] = length($link);
+	}
+	else {
+		@stats = lstat(fixup($file));
+	}
+
 	return -$! unless @stats;
 	return @stats;
 }
