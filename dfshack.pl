@@ -10,6 +10,8 @@ use Time::HiRes qw(time gettimeofday tv_interval usleep);
 use Getopt::Long;
 use Lchown qw(lchown);
 use File::Basename;
+use Fcntl qw(:mode);
+
 use Data::Dumper;
 
 our %extraopts = (
@@ -182,6 +184,9 @@ sub d_getattr {
 		}
 
 		$stats[8] = length($link);
+
+		# Convert the mode from a regular file to a link
+		$stats[2] = (($stats[2] & !S_IFREG) | S_IFLNK);
 	}
 	else {
 		@stats = lstat(fixup($file));
@@ -212,12 +217,6 @@ sub d_open {
 	my $file = shift;
 	my $mode = shift;
 	debug("d_open: " . $file);
-
-	if($symlinks{$file}) {
-		my $dir = dirname($file);
-		$file = $dir .  '/' . $symlinks{$file};
-		debug("d_open: " . $file);
-	}
 
 	sysopen(my $fh, fixup($file), $mode) || return -$!;
 
@@ -284,26 +283,27 @@ sub d_readlink {
 }
 
 sub d_unlink {
-	my $file = fixup(shift);
+	my $file = shift;
 	debug("d_unlink: " . $file);
 	print "unlink\n";
 	my $result = delete $symlinks{$file};
 	
-  return 0 if $result;
+	if($result) {
+		writelinks();
+		return 0;
+	}
 
 	local $!;
-	unlink($file);
+	unlink(fixup($file));
 	return -$!;
 }
 
 sub d_symlink {
 	my $old = shift;
 	my $new = shift;
-	my $absold = dirname($new) . '/' . $old;
 
-	debug("d_symlink: " . $absold . " " . $new);
-	if(! -e fixup($absold) || -e fixup($new) || $symlinks{$old} || $symlinks{$new}) {
-#		return -EEXISTS();
+	debug("d_symlink: " . $old . " " . $new);
+	if(-e fixup($new) || $symlinks{$new}) {
 		debug("d_symlink: something exists or doesn't");
 		return 0; #fail
 	}
@@ -318,7 +318,7 @@ sub d_symlink {
 
 	debug("d_symlink: success!");
 
-	return 1;
+	return undef;
 }
 
 sub d_link {
