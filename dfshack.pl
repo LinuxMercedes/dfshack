@@ -158,7 +158,7 @@ sub readlinks {
 sub debug {
 	my $string = shift;
 	print $string . "\n" if($extraopts{'debug'} && $string);
-	print "nothing to print here\n" if($extraopts{'debug'});
+	print "nothing to print here\n" if($extraopts{'debug'}) && !$string;
 }
 
 sub fixup {
