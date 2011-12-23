@@ -38,6 +38,9 @@ GetOptions(
 our %symlinks = ();
 our $symlinkupdate = undef;
 
+our %permissions = ();
+our $permissionsupdate = undef;
+
 sub checklock {
 	my $lock = shift;
 	my $lockfile = fixup("/.dfshack/.$lock");
@@ -155,6 +158,14 @@ sub readlinks {
 	return readfile("symlinks", \%symlinks, \$symlinkupdate);
 }
 
+sub writepermissions {
+	return writefile("permissions", \%permissions, \$permissionsupdate);
+}
+
+sub readpermissions {
+	return readfile("symlinks", \%permissionss, \$permissionsupdate);
+}
+
 sub debug {
 	my $string = shift;
 	print $string . "\n" if($extraopts{'debug'} && $string);
@@ -171,6 +182,10 @@ sub d_getattr {
 	my @stats;
 
 	debug("d_getattr: " . $file);
+
+	# Update cached data
+	return -$! if readlinks();
+	return -$! if readpermissions();
 
 	if(my $link = $symlinks{$file}) {
 		@stats = lstat(fixup("/.dfshack/symlinks"));
@@ -192,6 +207,10 @@ sub d_getattr {
 		@stats = lstat(fixup($file));
 	}
 
+	if(my $perms = $permissions{$file}) {
+		$stats[2] = (($stats[2] & !S_IWRXU) | $perms);
+	}
+
 	return -$! unless @stats;
 	return @stats;
 }
@@ -200,7 +219,7 @@ sub d_getdir {
 	my $dirname = shift;
 	debug("d_getdir: " . $dirname);
 
-	return -EAGAIN() if readlinks();
+	return -EAGAIN() if !readlinks();
 
 	opendir(my $dir, fixup($dirname)) || return -ENOENT();
 
@@ -306,7 +325,7 @@ sub d_symlink {
 
 	debug("d_symlink: " . $old . " " . $new);
 	
-	return 0 if readlinks();
+	return 0 if !readlinks();
 
 	if(-e fixup($new) || $symlinks{$new}) {
 		debug("d_symlink: something exists or doesn't");
@@ -355,11 +374,23 @@ sub d_chown {
 }
 
 sub d_chmod {
-	my $file = fixup(shift);
+	my $file = shift;
 	my $mode = shift;
 	debug("d_chmod: " . $file);
 
-	return chmod($mode, $file) ? 0 : -$!;
+	my $rv = readpermissions();
+	if($rv) {
+		return $rv;
+	}
+
+	$permissions{$file} = $mode;
+
+	$rv = writepermissions();
+
+	return 0 if !$rv;
+	return $rv;
+
+  # return chmod($mode, $file) ? 0 : -$!;
 }
 
 sub d_truncate {
@@ -442,18 +473,18 @@ if(! -d $dfsmount ) {
 }
 
 if(!$extraopts{'debug'}) {
-my $pid = fork();
-defined $pid or die "fork() failed: $!";
+	my $pid = fork();
+	defined $pid or die "fork() failed: $!";
 
-if($pid > 0) { #parent
-	exit(0);
-}
+	if($pid > 0) { #parent
+		exit(0);
+	}
 
-if($pidfile) { # child
-	open(my $pfh, '>', $pidfile);
-	print $pfh $$, "\n";
-	close $pfh;
-}
+	if($pidfile) { # child
+		open(my $pfh, '>', $pidfile);
+		print $pfh $$, "\n";
+		close $pfh;
+	}
 
 }
 
@@ -462,6 +493,7 @@ if(! -d fixup("/.dfshack")) {
 }
 
 readlinks();
+readpermissions();
 
 Fuse::main(
 		'mountpoint' => $mountpoint,
