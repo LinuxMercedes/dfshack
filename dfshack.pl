@@ -200,6 +200,8 @@ sub d_getdir {
 	my $dirname = shift;
 	debug("d_getdir: " . $dirname);
 
+	return -EAGAIN() if readlinks();
+
 	opendir(my $dir, fixup($dirname)) || return -ENOENT();
 
 	my @files = readdir($dir);
@@ -303,6 +305,9 @@ sub d_symlink {
 	my $new = shift;
 
 	debug("d_symlink: " . $old . " " . $new);
+	
+	return 0 if readlinks();
+
 	if(-e fixup($new) || $symlinks{$new}) {
 		debug("d_symlink: something exists or doesn't");
 		return 0; #fail
