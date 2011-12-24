@@ -5,7 +5,7 @@ use warnings;
 
 use Fuse;
 use POSIX qw(ENOENT ENOSYS ENOTDIR EEXIST EPERM EAGAIN O_RDONLY O_RDWR O_APPEND O_CREAT);
-use Fcntl qw(S_ISBLK S_ISCHR S_ISFIFO SEEK_SET S_ISREG S_ISFIFO S_IMODE S_ISCHR S_ISBLK S_ISSOCK);
+use Fcntl qw(S_ISBLK S_ISCHR S_ISFIFO SEEK_SET S_ISREG S_ISFIFO S_IMODE S_ISCHR S_ISBLK S_ISSOCK S_IRWXU);
 use Time::HiRes qw(time gettimeofday tv_interval usleep);
 use Getopt::Long;
 use Lchown qw(lchown);
@@ -163,7 +163,7 @@ sub writepermissions {
 }
 
 sub readpermissions {
-	return readfile("symlinks", \%permissionss, \$permissionsupdate);
+	return readfile("permissions", \%permissions, \$permissionsupdate);
 }
 
 sub debug {
@@ -207,8 +207,8 @@ sub d_getattr {
 		@stats = lstat(fixup($file));
 	}
 
-	if(my $perms = $permissions{$file}) {
-		$stats[2] = (($stats[2] & !S_IWRXU) | $perms);
+	if($permissions{$file}) {
+		$stats[2] = (($stats[2] & !S_IRWXU) | $permissions{$file});
 	}
 
 	return -$! unless @stats;
@@ -219,7 +219,7 @@ sub d_getdir {
 	my $dirname = shift;
 	debug("d_getdir: " . $dirname);
 
-	return -EAGAIN() if !readlinks();
+	return -EAGAIN() if readlinks();
 
 	opendir(my $dir, fixup($dirname)) || return -ENOENT();
 
