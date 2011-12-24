@@ -228,7 +228,7 @@ sub d_getdir {
 
 	foreach my $k (keys(%symlinks)) {
 		debug("d_getdir link: " . $k);
-		push(@files, basename($k)) if($k =~ /^$dirname/);
+		push(@files, basename($k)) if($k =~ /^$dirname\/?[^\/]+$/);
 	}
 
 	return (@files, 0);
