@@ -353,10 +353,43 @@ sub d_link {
 }
 
 sub d_rename {
-	my $old = fixup(shift);
-	my $new = fixup(shift);
+	my $old = shift;
+	my $new = shift;
 	debug("d_rename: " . $old . " " . $new);
-  return rename($old, $new) ? 0 : -ENOENT();
+
+	my $rv; 
+	my $ret;
+
+	return $rv if $rv = readlinks();
+	return $rv if $rv = readpermissions();
+
+	if(-d fixup($old)) {
+		foreach my $file (keys %symlinks) {
+			debug("d_rename: " . $file);
+			if($file =~ /^$old(\/.+)/) {
+				$symlinks{$new . $1} = delete $symlinks{$file};
+			}
+		}
+		foreach my $file (keys %permissions) {
+			# match both files in the directory and the directory itself.
+			if($file =~ /^$old(\/.+|)/) { 
+				$permissions{$new . $1} = delete $permissions{$file};
+			}
+		}
+	}
+	
+	if($symlinks{$old}) {
+		$symlinks{$new} = delete $symlinks{$old};
+		$ret = 0;
+	}
+	else {
+		$ret = rename(fixup($old), fixup($new)) ? 0 : -ENOENT();
+	}
+
+	return $rv if $rv = writelinks();
+	return $rv if $rv = writepermissions();
+
+  return $ret;
 }
 
 sub d_chown {
