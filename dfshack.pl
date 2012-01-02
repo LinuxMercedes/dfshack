@@ -325,10 +325,10 @@ sub d_symlink {
 
 	debug("d_symlink: " . $old . " " . $new);
 	
-	return 0 if !readlinks();
+	return 0 if readlinks();
 
 	if(-e fixup($new) || $symlinks{$new}) {
-		debug("d_symlink: something exists or doesn't");
+		debug("d_symlink: $new exists");
 		return 0; #fail
 	}
 
@@ -473,13 +473,13 @@ sub d_mknod {
 		chmod S_IMODE($modes), $file;
 		return 0;
 	}
-	elsif (S_ISFIFO($modes)) {
-		return POSIX::mkfifo($file, S_IMODE($modes)) ? 0 : -POSIX::errno();
-	}
-	elsif (S_ISCHR($modes) || S_ISBLK($modes)) {
-		mknod ($file, $modes, $dev);
-		return -$!;
-	}
+#	elsif (S_ISFIFO($modes)) {
+#		return POSIX::mkfifo($file, S_IMODE($modes)) ? 0 : -POSIX::errno();
+#	}
+#	elsif (S_ISCHR($modes) || S_ISBLK($modes)) {
+#		mknod ($file, $modes, $dev);
+#		return -$!;
+#	}
 	#S_ISSOCK?
 	else {
 		return -ENOSYS();
