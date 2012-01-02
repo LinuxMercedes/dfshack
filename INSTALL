@@ -1,5 +1,6 @@
 Prerequisites:
-	Perl
-	Log::Handler
+	Perl 5.x (tested on 5.10)
+	libfuse-perl 0.14
+	Time::HiRes
 	Intelligence
 
