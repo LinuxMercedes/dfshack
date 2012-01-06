@@ -4,13 +4,14 @@ use strict;
 use warnings;
 
 use Fuse;
-use POSIX qw(ENOENT ENOSYS ENOTDIR EEXIST EPERM EAGAIN O_RDONLY O_RDWR O_APPEND O_CREAT);
+use POSIX qw(setsid ENOENT ENOSYS ENOTDIR EEXIST EPERM EAGAIN O_RDONLY O_RDWR O_APPEND O_CREAT);
 use Fcntl qw(S_ISBLK S_ISCHR S_ISFIFO SEEK_SET S_ISREG S_ISFIFO S_IMODE S_ISCHR S_ISBLK S_ISSOCK S_IRWXU);
 use Time::HiRes qw(time gettimeofday tv_interval usleep);
 use Getopt::Long;
 use Lchown qw(lchown);
 use File::Basename;
 use Fcntl qw(:mode);
+use Filesys::Statvfs;
 
 use Data::Dumper;
 
@@ -488,7 +489,8 @@ sub d_mknod {
 }
 
 sub d_statfs {
-	return -ENOSYS(); #lol suckers
+	debug("d_statfs");
+	return (statvfs($dfsmount))[1,2,3,5,6,9]; #from perl-fuse unit test
 }
 
 #from http://perldoc.perl.org/perlipc.html#Complete-Dissociation-of-Child-from-Parent
