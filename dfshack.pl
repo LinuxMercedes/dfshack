@@ -500,14 +500,14 @@ sub daemonize {
 	open(STDOUT, "> /dev/null") || die "can't write to /dev/null: $!";
 	defined(my $pid = fork()) || die "can't fork: $!";
 	exit if $pid; # non-zero now means I am the parent
-	(setsid() != -1) || die "Can't start a new session: $!"
+	(setsid() != -1) || die "Can't start a new session: $!";
 	open(STDERR, ">&STDOUT") || die "can't dup stdout: $!";
 }
 
 sub checkmounts {
 	debug("checkmounts");
 	open(my $mount, "mount |") or die "failed to run mount: $!";
-	while($line = <$mount>) {
+	while(my $line = <$mount>) {
 		if($line =~ /\/dev\/fuse.+$mountpoint/) {
 				debug("checkmounts: $mountpoint already mounted");
 				close($mount);
