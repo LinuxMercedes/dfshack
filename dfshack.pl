@@ -284,7 +284,6 @@ sub err {
 
 sub d_readlink {
 	my $file = shift;
-	print "readlink\n";
 	debug("d_readlink: " . $file);
 	my $rv  = readlinks();
 
@@ -302,8 +301,6 @@ sub d_readlink {
 sub d_unlink {
 	my $file = shift;
 	debug("d_unlink: " . $file);
-	print "unlink\n";
-	my $result = delete $symlinks{$file};
 	
 	if($result) {
 		writelinks();
@@ -342,7 +339,6 @@ sub d_symlink {
 }
 
 sub d_link {
-	print "hardlink\n";
 	debug("d_link: " . shift);
 #	return link(fixup(shift), fixup(shift)) ? 0 : -$!;
 	return -ENOSYS();
@@ -395,8 +391,8 @@ sub d_chown {
 	
 	debug("d_chown: " . $file);
 
-	local $!; #huh?
-	print "no file $file\n" unless -e $file;
+	local $!;
+	debug("d_chown: no file $file") unless -e $file;
 	lchown($uid, $gid, $file);
 
 	return -$!;
@@ -418,8 +414,6 @@ sub d_chmod {
 
 	return 0 if !$rv;
 	return $rv;
-
-  # return chmod($mode, $file) ? 0 : -$!;
 }
 
 sub d_truncate {
