@@ -491,6 +491,18 @@ sub d_statfs {
 	return -ENOSYS(); #lol suckers
 }
 
+#from http://perldoc.perl.org/perlipc.html#Complete-Dissociation-of-Child-from-Parent
+sub daemonize {
+	chdir("/") || die "can't chdir to /: $!";
+	open(STDIN, "< /dev/null") || die "can't read /dev/null: $!";
+	open(STDOUT, "> /dev/null") || die "can't write to /dev/null: $!";
+	defined(my $pid = fork()) || die "can't fork: $!";
+	exit if $pid; # non-zero now means I am the parent
+	(setsid() != -1) || die "Can't start a new session: $!"
+	open(STDERR, ">&STDOUT") || die "can't dup stdout: $!";
+}
+
+$dfsmount = shift(@ARGV) if (!$dfsmount && @ARGV);
 $mountpoint = shift(@ARGV) if (!$mountpoint && @ARGV);
 
 if(! -e "$mountpoint") {
@@ -507,19 +519,7 @@ if(! -d $dfsmount ) {
 }
 
 if(!$extraopts{'debug'}) {
-	my $pid = fork();
-	defined $pid or die "fork() failed: $!";
-
-	if($pid > 0) { #parent
-		exit(0);
-	}
-
-	if($pidfile) { # child
-		open(my $pfh, '>', $pidfile);
-		print $pfh $$, "\n";
-		close $pfh;
-	}
-
+	daemonize();
 }
 
 if(! -d fixup("/.dfshack")) {
