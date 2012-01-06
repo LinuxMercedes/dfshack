@@ -526,9 +526,6 @@ if(! -d fixup("/.dfshack")) {
 	mkdir(fixup("/.dfshack"), 0777);
 }
 
-readlinks();
-readpermissions();
-
 Fuse::main(
 		'mountpoint' => $mountpoint,
 		'getattr' => 'main::d_getattr',
