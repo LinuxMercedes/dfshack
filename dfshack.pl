@@ -504,6 +504,20 @@ sub daemonize {
 	open(STDERR, ">&STDOUT") || die "can't dup stdout: $!";
 }
 
+sub checkmounts {
+	debug("checkmounts");
+	open(my $mount, "mount |") or die "failed to run mount: $!";
+	while($line = <$mount>) {
+		if($line =~ /\/dev\/fuse.+$mountpoint/) {
+				debug("checkmounts: $mountpoint already mounted");
+				close($mount);
+				exit(0);
+		}
+	}
+	debug("checkmounts: not mounted");
+	close($mount);
+}
+
 $dfsmount = shift(@ARGV) if (!$dfsmount && @ARGV);
 $mountpoint = shift(@ARGV) if (!$mountpoint && @ARGV);
 
@@ -519,6 +533,8 @@ if(! -e $dfsmount ) {
 if(! -d $dfsmount ) {
 	die "dfs mount $dfsmount is not a directory.\n";
 }
+
+checkmounts();
 
 if(!$extraopts{'debug'}) {
 	daemonize();
