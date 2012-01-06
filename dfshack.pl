@@ -302,7 +302,14 @@ sub d_unlink {
 	my $file = shift;
 	debug("d_unlink: " . $file);
 	
-	if($result) {
+	return -$! if readlinks();
+	return -$! if readpermissions();
+
+	if(delete $permissions{$file}) {
+		writepermissions();
+	}
+
+	if(delete $symlinks{$file}) {
 		writelinks();
 		return 0;
 	}
@@ -368,6 +375,10 @@ sub d_rename {
 				$permissions{$new . $1} = delete $permissions{$file};
 			}
 		}
+	}
+
+	if($permissions{$old}) {
+		$permissions{$new} = delete $permissions{$old};
 	}
 	
 	if($symlinks{$old}) {
