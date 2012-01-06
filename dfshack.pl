@@ -17,6 +17,7 @@ use Data::Dumper;
 our %extraopts = (
 		'threaded' => 0,
 		'debug' => 0,
+		'mountopts' => '',
 		);
 
 our $dfsmount;
@@ -33,6 +34,7 @@ GetOptions(
 		'dfs=s' => \$dfsmount,
 		'mount=s' => \$mountpoint,
 		'pidfile=s' => \$pidfile,
+		'o=s' => \$extraopts{'mountopts'},
 ) or die "could not parse options";
 
 our %symlinks = ();
