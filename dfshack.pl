@@ -84,12 +84,11 @@ sub readfile {
 	my $rv = checklock($readtype);
 	return $rv if $rv;
 
-	my $mtime = undef;
+  my $mtime = (stat($filename))[9];
 
 # If we're already up-to-date, don't bother
 # reading the file.
 	if($$modified) {
-		$mtime = (stat($filename))[9];
 		if($mtime == $$modified) {
 			debug("readfile: up-to-date");
 			return undef;
@@ -97,7 +96,6 @@ sub readfile {
 	}
 
 # Update the modified time
-	$mtime = (stat($filename))[9] unless $mtime;
 	$$modified = $mtime;
 	
 	%$hash = ();
@@ -127,10 +125,6 @@ sub writefile {
 
 	my $rv = checklock($writetype);
 	return $rv if $rv;
-
-	if(-e $filename) {
-		debug("writefile: $filename exists");
-	}
 
 	if(-e $filename && ($$modified > (stat($filename))[9])) {
 		debug("WARNING: link file modified in the future?");
