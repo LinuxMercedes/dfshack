@@ -10,6 +10,7 @@ use Time::HiRes qw(time gettimeofday tv_interval usleep);
 use Getopt::Long;
 use Lchown qw(lchown);
 use File::Basename;
+use File::Spec;
 use Fcntl qw(:mode);
 use Filesys::Statvfs;
 
@@ -504,18 +505,16 @@ sub daemonize {
 	open(STDERR, ">&STDOUT") || die "can't dup stdout: $!";
 }
 
-sub checkmounts {
+sub is_mounted {
 	debug("checkmounts");
-	open(my $mount, "mount |") or die "failed to run mount: $!";
-	while(my $line = <$mount>) {
-		if($line =~ /\/dev\/fuse.+$mountpoint/) {
-				debug("checkmounts: $mountpoint already mounted");
-				close($mount);
-				exit(0);
-		}
+	if((stat($mountpoint))[0] == (stat(File::Spec->catdir($mountpoint, '..')))[0]) {
+		debug("checkmounts: not mounted");
+		return undef;
 	}
-	debug("checkmounts: not mounted");
-	close($mount);
+	else {
+		debug("checkmounts: $mountpoint already mounted");
+		return 1;
+	}
 }
 
 $dfsmount = shift(@ARGV) if (!$dfsmount && @ARGV);
@@ -534,7 +533,7 @@ if(! -d $dfsmount ) {
 	die "dfs mount $dfsmount is not a directory.\n";
 }
 
-checkmounts();
+is_mounted() and die "$mountpoint is already mounted!\n";
 
 if(!$extraopts{'debug'}) {
 	daemonize();
