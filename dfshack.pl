@@ -651,27 +651,30 @@ sub d_rmdir {
 }
 
 sub d_mknod {
-	my $file = fixup(shift);
+	my $file = shift;
 	my $modes = shift;
 	my $dev = shift;
 
 	debug("d_mknod: " . $file);
 	undef $!;
 
+	return -EAGAIN() if readpermissions();
+
 	if(S_ISREG($modes)) {
-		open(my $fh, '>', $file) or return -$!;
+		open(my $fh, '>', fixup($file)) or return -$!;
 		print $fh '';
 		close $fh;
-		chmod S_IMODE($modes), $file;
+		$permissions{$file} = $modes;
+		writepermissions();
 		return 0;
 	}
 #	elsif (S_ISFIFO($modes)) {
 #		return POSIX::mkfifo($file, S_IMODE($modes)) ? 0 : -POSIX::errno();
 #	}
-#	elsif (S_ISCHR($modes) || S_ISBLK($modes)) {
-#		mknod ($file, $modes, $dev);
-#		return -$!;
-#	}
+	elsif (S_ISCHR($modes) || S_ISBLK($modes)) {
+		mknod ($file, $modes, $dev);
+		return -$!;
+	}
 	#S_ISSOCK?
 	else {
 		return -ENOSYS();
@@ -687,7 +690,12 @@ sub d_statfs {
 sub daemonize {
 	chdir("/") || die "can't chdir to /: $!";
 	open(STDIN, "< /dev/null") || die "can't read /dev/null: $!";
-	open(STDOUT, "> /dev/null") || die "can't write to /dev/null: $!";
+	if($extraopts{'debug'}) {
+		open(STDOUT, "> /tmp/dfshack$$") || die "can't write to /dev/null: $!";
+	}
+	else {
+		open(STDOUT, "> /dev/null") || die "can't write to /dev/null: $!";
+	}
 	defined(my $pid = fork()) || die "can't fork: $!";
 	exit if $pid; # non-zero now means I am the parent
 	(setsid() != -1) || die "Can't start a new session: $!";
@@ -724,9 +732,7 @@ if(! -d $dfsmount ) {
 
 is_mounted() and die "$mountpoint is already mounted!\n";
 
-if(!$extraopts{'debug'}) {
-	daemonize();
-}
+daemonize();
 
 if(! -d fixup("/.dfshack")) {
 	mkdir(fixup("/.dfshack"), 0777);
