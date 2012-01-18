@@ -517,7 +517,7 @@ sub daemonize {
 	chdir("/") || die "can't chdir to /: $!";
 	open(STDIN, "< /dev/null") || die "can't read /dev/null: $!";
 	if($extraopts{'debug'}) {
-		open(STDOUT, "> /tmp/dfshack$$") || die "can't write to /dev/null: $!";
+		open(STDOUT, "> /tmp/dfshack$$") || die "can't write to /tmp/dfshack$$: $!";
 	}
 	else {
 		open(STDOUT, "> /dev/null") || die "can't write to /dev/null: $!";
