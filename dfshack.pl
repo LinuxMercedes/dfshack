@@ -45,10 +45,6 @@ our $symlinkupdate = undef;
 our %permissions = ();
 our $permissionsupdate = undef;
 
-our %hardlinks = ();
-our %hardlinkcount = ();
-our $hardlinksupdate = undef;
-
 sub checklock {
 	my $lock = shift;
 	my $lockfile = fixup("/.dfshack/.$lock");
@@ -168,22 +164,6 @@ sub readpermissions {
 	return readfile("permissions", \%permissions, \$permissionsupdate);
 }
 
-sub writehardlinks {
-	my $hardlinkcountupdate = $hardlinksupdate;
-	my $rv = undef;
-	$rv = writefile("hardlinks", \%hardlinks, \$hardlinksupdate);
-	$rv = writefile("hardlinkcount", \%hardlinkcount, \$hardlinkcountupdate) if(!defined($rv));
-	return $rv;
-}
-
-sub readhardlinks {
-	my $hardlinkcountupdate = $hardlinksupdate;
-	my $rv = undef;
-	$rv = readfile("hardlinks", \%hardlinks, \$hardlinksupdate);
-	$rv = readfile("hardlinkcount", \%hardlinkcount, \$hardlinkcountupdate) if(!defined($rv));
-	return $rv;
-}
-
 sub debug {
 	my $string = shift;
 	print $string . "\n" if($extraopts{'debug'} && $string);
@@ -203,7 +183,6 @@ sub d_getattr {
 
 	# Update cached data
 	return -$! if readlinks();
-	return -$! if readhardlinks();
 	return -$! if readpermissions();
 
 	if(my $link = $symlinks{$file}) {
@@ -224,16 +203,9 @@ sub d_getattr {
 		$stats[2] = (($stats[2] & !S_IFREG) | S_IFLNK);
 	}
 	else {
-		if($link = $hardlinks{$file}) {
-			debug("d_getattr: is hardlink");
-			$file = $link;
-		}
-		else {
-			debug("d_getattr: is regular file");
-		}
+		debug("d_getattr: is regular file");
 
 		@stats = lstat(fixup($file));
-		$stats[3] = $hardlinkcount{$file} if($hardlinkcount{$file});
 	}
 
 	if($permissions{$file}) {
@@ -250,7 +222,6 @@ sub d_getdir {
 	debug("d_getdir: " . $dirname);
 
 	return -EAGAIN() if readlinks();
-	return -EAGAIN() if readhardlinks();
 
 	opendir(my $dir, fixup($dirname)) || return -ENOENT();
 
@@ -262,24 +233,12 @@ sub d_getdir {
 		push(@files, basename($k)) if($k =~ /^$dirname\/?[^\/]+$/);
 	}
 
-	foreach my $k (keys(%hardlinks)) {
-		push(@files, basename($k)) if($k =~ /^$dirname\/?[^\/]+$/);
-	}
-
 	return (@files, 0);
 }
 
 sub d_open {
 	my $file = shift;
 	my $mode = shift;
-	debug("d_open: " . $file);
-
-	return -EAGAIN() if readhardlinks();
-
-	if(my $link = $hardlinks{$file}) {
-		$file = $link;
-	}
-
 	debug("d_open: " . $file);
 
 	sysopen(my $fh, fixup($file), $mode) || return -$!;
@@ -296,17 +255,9 @@ sub d_read {
 
 	debug("d_read: " . $file);
 
-	return -EAGAIN() if readhardlinks();
-
-	if(my $link = $hardlinks{$file}) {
-		$file = $link;
-	}
-
 	$file = fixup($file);
 
-	debug("d_read: " . $file);
-
-	return -ENOENT() unless -e($file); # = fixup($file)
+	return -ENOENT() unless -e($file);
 	
 	my $size = -s $file;
 
@@ -325,12 +276,6 @@ sub d_write {
 	my $rv;
 	debug("d_write: " . $file);
 	
-	return -EAGAIN() if readhardlinks();
-
-	if(my $link = $hardlinks{$file}) {
-		$file = $link;
-	}
-
 	$file = fixup($file);
 	
 	return -ENOENT() unless -e($file); 
@@ -370,7 +315,6 @@ sub d_unlink {
 	debug("d_unlink: " . $file);
 	
 	return -$! if readlinks();
-	return -$! if readhardlinks();
 	return -$! if readpermissions();
 
 	if(delete $permissions{$file}) {
@@ -382,49 +326,9 @@ sub d_unlink {
 		return 0;
 	}
 
-	if(my $link = delete $hardlinks{$file}) {
-			if(--$hardlinkcount{$link} == 1) {
-				delete $hardlinkcount{$link};
-			}
-		writehardlinks();
-		return 0;
-	}
-
-  # If there are multiple hardlinks to this file, 
-  # rename it to one of the hardlinks
-	elsif($hardlinkcount{$file}) {
-		my $newfile;
-		my $ret = -ENOENT();
-		while(my ($link, $orig) = each(%hardlinks)) {
-			if($orig eq $file) {
-				$newfile = $link;
-				$ret = rename(fixup($file), fixup($link)) ? 0 : -ENOENT();
-				delete $hardlinks{$link};
-				last;
-			}
-		}
-
-		# check to see if there are other hardlinks to this file
-		# and point them at the new hardlink
-		if(--$hardlinkcount{$file} > 1) {
-			while(my ($link, $orig) = each(%hardlinks)) {
-				if($orig eq $file) {
-					$hardlinks{$link} = $newfile;
-				}
-			}
-		}
-
-		$hardlinkcount{$newfile} = delete $hardlinkcount{$file};
-
-		writehardlinks();
-		return $ret;
-	}
-	else {
-		local $!;
-		unlink(fixup($file));
-		return -$!;
-	}
-	
+	local $!;
+	unlink(fixup($file));
+	return -$!;
 }
 
 sub d_symlink {
@@ -459,39 +363,7 @@ sub d_link {
 
 	debug("d_link: " . $old . ' ' . $new);
 
-	return -EAGAIN() if readhardlinks();
-
-	if(-e fixup($new))
-	{
-		debug("d_link: $new exists");
-		return -EEXIST();
-	}
-
-	my $link = $old;
-	while($hardlinks{$link}) {
-		$link = $hardlinks{$link};
-	}
-
-	$hardlinks{$new} = $link;
-
-	if($hardlinkcount{$link}) {
-		$hardlinkcount{$link}++;
-	}
-	else {
-		$hardlinkcount{$link} = 2;
-	}
-
-	my $rv = writehardlinks();
-	if($rv) {
-		debug("d_link: failed to write link file");
-		delete $hardlinks{$new};
-		delete $hardlinkcount{$link};
-		return -EAGAIN();
-	}
-
-	debug("d_link: success!");
-	
-	return undef;
+	return link(fixup($old), fixup($new)) ? 0 : -$!;
 }
 
 sub d_rename {
@@ -503,7 +375,6 @@ sub d_rename {
 	my $ret;
 
 	return $rv if $rv = readlinks();
-	return $rv if $rv = readhardlinks();
 	return $rv if $rv = readpermissions();
 
 	if(-d fixup($old)) {
@@ -511,12 +382,6 @@ sub d_rename {
 			debug("d_rename: " . $file);
 			if($file =~ /^$old(\/.+)/) {
 				$symlinks{$new . $1} = delete $symlinks{$file};
-			}
-		}
-		foreach my $file (keys %hardlinks) {
-			debug("d_rename hardlink: " . $file);
-			if($file =~ /^$old(\/.+)/) {
-				$hardlinks{$new . $1} = delete $hardlinks{$file};
 			}
 		}
 		foreach my $file (keys %permissions) {
@@ -531,22 +396,8 @@ sub d_rename {
 		$permissions{$new} = delete $permissions{$old};
 	}
 	
-	if($hardlinkcount{$old}) {
-		while(my ($link, $orig) = each(%hardlinks)) {
-			if($orig eq $old) {
-				$hardlinks{$link} = $new;
-			}
-		}
-		
-		$hardlinkcount{$new} = delete $hardlinkcount{$old};
-	}
-
 	if($symlinks{$old}) {
 		$symlinks{$new} = delete $symlinks{$old};
-		$ret = 0;
-	}
-	elsif($hardlinks{$old}) {
-		$hardlinks{$new} = delete $hardlinks{$old};
 		$ret = 0;
 	}
 	else {
@@ -554,7 +405,6 @@ sub d_rename {
 	}
 
 	return $rv if $rv = writelinks();
-	return $rv if $rv = writehardlinks();
 	return $rv if $rv = writepermissions();
 
   return $ret;
@@ -566,12 +416,6 @@ sub d_chown {
 	my $gid = shift;
 	
 	debug("d_chown: " . $file);
-
-	return -EAGAIN() if readhardlinks();
-
-	if($hardlinks{$file}) {
-		$file = $hardlinks{$file};
-	}
 
 	$file = fixup($file);
 
@@ -592,12 +436,6 @@ sub d_chmod {
 		return $rv;
 	}
 
-	return -EAGAIN() if readhardlinks();
-
-	if($hardlinks{$file}) {
-		$file = $hardlinks{$file};
-	}
-
 	$permissions{$file} = $mode;
 
 	$rv = writepermissions();
@@ -611,12 +449,6 @@ sub d_truncate {
 	my $length = shift;
 	debug("d_truncate: " . $file);
 
-	return -EAGAIN() if readhardlinks();
-
-	if(my $link = $hardlinks{$file}) {
-		$file = $link;
-	}
-
 	return truncate(fixup($file), $length) ? 0 : -$!;
 }
 
@@ -625,12 +457,6 @@ sub d_utime {
 	my $atime = shift;
 	my $utime = shift;
 	debug("d_utime: " . $file);
-	
-	return -EAGAIN() if readhardlinks();
-
-	if(my $link = $hardlinks{$file}) {
-		$file = $link;
-	}
 	
 	return utime($atime, $utime, fixup($file)) ? 0 : -$!;
 }
