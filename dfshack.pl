@@ -10,11 +10,14 @@ use Time::HiRes qw(time gettimeofday tv_interval usleep);
 use Getopt::Long;
 use Lchown qw(lchown);
 use File::Basename;
-use File::Spec;
+use File::Spec::Functions qw(catdir catfile devnull tmpdir rootdir);
+use File::Util qw(SL); # since File::Spec has no way to directly access the path separator
 use Fcntl qw(:mode);
 use Filesys::Statvfs;
 
 use Data::Dumper;
+
+our $datadir = catdir(rootdir(), ".dfshack");
 
 our %extraopts = (
 		'threaded' => 0,
@@ -47,7 +50,7 @@ our $permissionsupdate = undef;
 
 sub checklock {
 	my $lock = shift;
-	my $lockfile = fixup("/.dfshack/.$lock");
+	my $lockfile = fixup(catfile($datadir, ".$lock"));
 
 	my $start = [gettimeofday];
 	my $elapsed = $start;
@@ -70,7 +73,7 @@ sub readfile {
 	my $hash = shift;
 	my $modified = shift;
 
-	my $filename = fixup("/.dfshack/$readtype");
+	my $filename = fixup(catfile($datadir, "$readtype"));
 	
 	debug("readfile: " . $filename);
 
@@ -121,7 +124,7 @@ sub writefile {
 	my $hash = shift;
 	my $modified = shift;
 
-	my $filename = fixup("/.dfshack/$writetype");
+	my $filename = fixup(catfile($datadir, "$writetype"));
 
 	debug("writefile: " . $filename);
 
@@ -132,7 +135,7 @@ sub writefile {
 		debug("WARNING: link file modified in the future?");
 	}
 
-	open(my $lock, '>', ".dfshack/.$writetype");
+	open(my $lock, '>', fixup(catfile($datadir, ".$writetype")));
 	close($lock);
 
 	open(my $fh, '>', $filename);
@@ -143,7 +146,7 @@ sub writefile {
 
 	close($fh);
 
-	unlink(".dfshack/.$writetype");
+	unlink(fixup(catfile($datadir,".$writetype")));
 
 	return undef;
 }
@@ -172,7 +175,7 @@ sub debug {
 
 sub fixup {
 	my $file = shift;
-	return $dfsmount . $file;
+	return catfile($dfsmount, $file);
 }
 
 sub d_getattr {
@@ -187,9 +190,9 @@ sub d_getattr {
 
 	if(my $link = $symlinks{$file}) {
 		debug("d_getattr: is symlink");
-		@stats = lstat(fixup("/.dfshack/symlinks"));
+		@stats = lstat(fixup(catfile($datadir, "symlinks")));
 
-		my $linkfile = fixup(dirname($file) . '/' . $file);
+		my $linkfile = fixup(catfile(dirname($file), $file));
 		if(-e $linkfile) {
 			my @lstats = lstat($linkfile);
 			$stats[9] = $lstats[9];
@@ -380,14 +383,14 @@ sub d_rename {
 	if(-d fixup($old)) {
 		foreach my $file (keys %symlinks) {
 			debug("d_rename: " . $file);
-			if($file =~ /^$old(\/.+)/) {
-				$symlinks{$new . $1} = delete $symlinks{$file};
+			if($file =~ /^$old\Q${\SL}\E(.+)/) {
+				$symlinks{catfile($new, $1)} = delete $symlinks{$file};
 			}
 		}
 		foreach my $file (keys %permissions) {
 			# match both files in the directory and the directory itself.
-			if($file =~ /^$old(\/.+|)/) { 
-				$permissions{$new . $1} = delete $permissions{$file};
+			if($file =~ /^$old\Q${\SL}\E(.+|)/) { 
+				$permissions{catfile($new, $1)} = delete $permissions{$file};
 			}
 		}
 	}
@@ -514,14 +517,18 @@ sub d_statfs {
 
 #from http://perldoc.perl.org/perlipc.html#Complete-Dissociation-of-Child-from-Parent
 sub daemonize {
-	chdir("/") || die "can't chdir to /: $!";
-	open(STDIN, "< /dev/null") || die "can't read /dev/null: $!";
+	chdir(rootdir()) || die "can't chdir to /: $!";
+	open(STDIN, '<', devnull()) || die "can't read /dev/null: $!";
+
+	my $outfile;
 	if($extraopts{'debug'}) {
-		open(STDOUT, "> /tmp/dfshack$$") || die "can't write to /tmp/dfshack$$: $!";
+		debug("Pid: $$");
+		$outfile = catfile(tmpdir(), "dfshack$$");
 	}
 	else {
-		open(STDOUT, "> /dev/null") || die "can't write to /dev/null: $!";
+		$outfile = devnull();
 	}
+	open(STDOUT, '>', $outfile) || die "can't write to $outfile: $!";
 	defined(my $pid = fork()) || die "can't fork: $!";
 	exit if $pid; # non-zero now means I am the parent
 	(setsid() != -1) || die "Can't start a new session: $!";
@@ -560,8 +567,8 @@ is_mounted() and die "$mountpoint is already mounted!\n";
 
 daemonize();
 
-if(! -d fixup("/.dfshack")) {
-	mkdir(fixup("/.dfshack"), 0777);
+if(! -d fixup($datadir)) {
+	mkdir(fixup($datadir), 0777);
 }
 
 Fuse::main(
