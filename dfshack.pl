@@ -17,6 +17,8 @@ use Filesys::Statvfs;
 
 use Data::Dumper;
 
+our $time_epsilon = 1;
+
 our $datadir = catdir(rootdir(), ".dfshack");
 
 our %extraopts = (
@@ -94,7 +96,7 @@ sub readfile {
 # If we're already up-to-date, don't bother
 # reading the file.
 	if($$modified) {
-		if($mtime == $$modified) {
+		if(abs($mtime - $$modified) < $time_epsilon) {
 			debug("readfile: up-to-date");
 			return undef;
 		}
