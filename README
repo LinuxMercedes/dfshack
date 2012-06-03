@@ -1,7 +1,6 @@
 dfshack--A hack built to make dfs look sorta like a "normal" linux filesystem. 
 
 The point of dfshack is to allow software like KDE (which requires lockfiles) and Cadence (which requires special permissions on data files for god-knows-why) to coexist happily with dfs-mounted home directories. 
-Also, in theory this could be used to allow, say, key-based SSH auth to machines with dfs-mounted home directories as well. 
 
 dfshack works by proxying fs calls for the user's home directory to the dfs mount directory and modifying the results of the dfs directory based on some config files in which it stores custom permissions and symlinks.
 
