@@ -14,6 +14,7 @@ use File::Spec::Functions qw(catdir catfile devnull tmpdir rootdir);
 use File::Util qw(SL); # since File::Spec has no way to directly access the path separator
 use Fcntl qw(:mode);
 use Filesys::Statvfs;
+use DBI;
 
 use Data::Dumper;
 
@@ -49,6 +50,34 @@ our $symlinkupdate = undef;
 
 our %permissions = ();
 our $permissionsupdate = undef;
+
+our $dbh;
+
+sub db_connect {
+	debug("Connect to sqlitedb");
+	return DBI->connect("dbi:SQLite:dbname=" . fixup(catfile($datadir, "sqlitedb")), "", "");
+}
+
+sub db_disconnect {
+	debug("Disconnect from sqlitedb");
+	return shift->disconnect;
+}
+
+sub db_create {
+	my $sth;
+
+	debug("Create sqlitedb");
+
+	$sth = $dbh->prepare("CREATE TABLE permissions(id INTEGER PRIMARY KEY ASC, file TEXT NOT NULL, perms INTEGER NOT NULL)");
+	$sth->execute();
+
+	$sth = $dbh->prepare("CREATE TABLE symlinks(id INTEGER PRIMARY KEY ASC, src TEXT NOT NULL, dest TEXT NOT NULL)");
+	$sth->execute();
+}
+
+sub db_import {
+
+}
 
 sub checklock {
 	my $lock = shift;
@@ -634,6 +663,9 @@ if(! -d fixup($datadir)) {
 	mkdir(fixup($datadir), 0777);
 }
 
+$dbh = db_connect();
+db_create();
+
 Fuse::main(
 		'mountpoint' => $mountpoint,
 		'getattr' => 'main::d_getattr',
@@ -656,4 +688,6 @@ Fuse::main(
 		'statfs' => 'main::d_statfs',
 		%extraopts,
 		);
+
+db_disconnect($dbh);
 
