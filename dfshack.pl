@@ -517,6 +517,67 @@ sub d_statfs {
 	return (statvfs($dfsmount))[1,2,3,5,6,9]; #from perl-fuse unit test
 }
 
+# Implement this stuff
+sub d_flush {
+}
+
+sub d_release {
+}
+
+sub d_fsync {
+}
+
+sub d_setxattr {
+}
+
+sub d_getxattr {
+}
+
+sub d_listxattr {
+}
+
+sub d_removexattr {
+}
+
+sub d_opendir {
+}
+
+sub d_readdir {
+}
+
+sub d_releasedir { 
+}
+
+sub d_fsyncdir {
+}
+
+sub d_init {
+}
+
+sub d_destroy {
+}
+
+sub d_access {
+}
+
+sub d_create {
+}
+
+sub d_ftruncate {
+}
+
+sub d_fgetattr {
+}
+
+sub d_lock {
+}
+
+sub d_utimens {
+}
+
+sub d_bmap {
+}
+
 #from http://perldoc.perl.org/perlipc.html#Complete-Dissociation-of-Child-from-Parent
 sub daemonize {
 	chdir(rootdir()) || die "can't chdir to /: $!";
