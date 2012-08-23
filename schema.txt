@@ -1,3 +1,5 @@
-Permissions: ID, FileName, Permissions
-Links: ID, Src, Dest
+Files: ID, Fullname, Dirname, Filename 
+Directory, Filename
+Permissions: ID, Permissions
+Links: ID, Dest
 
