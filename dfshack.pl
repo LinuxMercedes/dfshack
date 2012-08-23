@@ -68,10 +68,13 @@ sub db_create {
 
 	debug("Create sqlitedb");
 
-	$sth = $dbh->prepare("CREATE TABLE permissions(id INTEGER PRIMARY KEY ASC, file TEXT NOT NULL, perms INTEGER NOT NULL)");
+	$sth = $dbh->prepare("CREATE TABLE files(id INTEGER PRIMARY KEY ASC, fullname TEXT UNIQUE NOT NULL, dirname TEXT NOT NULL, filename TEXT NOT NULL)");
 	$sth->execute();
 
-	$sth = $dbh->prepare("CREATE TABLE symlinks(id INTEGER PRIMARY KEY ASC, src TEXT NOT NULL, dest TEXT NOT NULL)");
+	$sth = $dbh->prepare("CREATE TABLE permissions(id INTEGER PRIMARY KEY, perms INTEGER NOT NULL)");
+	$sth->execute();
+
+	$sth = $dbh->prepare("CREATE TABLE symlinks(id INTEGER PRIMARY KEY, dest TEXT NOT NULL)");
 	$sth->execute();
 }
 
