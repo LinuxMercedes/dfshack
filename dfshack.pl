@@ -82,6 +82,60 @@ sub db_import {
 
 }
 
+# Get the DB id of said file
+sub get_id {
+	my $file = shift;
+
+	my $sth = $dbh->prepare("SELECT id FROM files WHERE fullname=?");
+	$sth->execute($file);
+	my $id_row = $sth->fetch;
+
+	return undef unless defined $id_row;
+	return $id_row->[0];
+}
+
+# Add a file to the DB if it doesn't already exist
+sub create_file {
+	my $file = shift;
+	my $dirname = dirname($file);
+	my $filename = basehame($file);
+
+	my $sth = $dbh->prepare("INSERT INTO files VALUES (NULL, ?, ?, ?)");
+	return $sth->execute($file, $dirname, $filename);
+}
+
+# Determine if a file is a symlink
+sub is_symlink {
+	return defined get_symlink(shift);
+}
+
+# Create a symlink in the DB
+sub make_symlink {
+	my $file = shift;
+	my $dest = shift;
+	
+	create_file($file);
+
+
+}
+
+# Get the target/destination of a symlink
+sub get_symlink {
+	my $file = shift;
+	
+	my $id = get_id($file);
+	return undef unless defined $id;
+
+	my $sth = $dbh->prepare("SELECT dest FROM symlinks WHERE id=?");
+	$sth->execute($id);
+	my $res = $sth->fetch;
+	return undef unless defined $res;
+	return $res->[0];
+}
+
+sub del_symlink {
+}
+
 sub checklock {
 	my $lock = shift;
 	my $lockfile = fixup(catfile($datadir, ".$lock"));
