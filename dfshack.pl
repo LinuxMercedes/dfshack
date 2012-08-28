@@ -679,6 +679,12 @@ sub d_utimens {
 sub d_bmap {
 }
 
+sub d_ioctl {
+}
+
+sub d_poll {
+}
+
 #from http://perldoc.perl.org/perlipc.html#Complete-Dissociation-of-Child-from-Parent
 sub daemonize {
 	chdir(rootdir()) || die "can't chdir to /: $!";
