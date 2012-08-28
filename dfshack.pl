@@ -82,7 +82,7 @@ sub db_import {
 
 }
 
-# Get the DB id of said file
+# Get the DB id of a file
 sub get_id {
 	my $file = shift;
 
@@ -115,8 +115,10 @@ sub make_symlink {
 	my $dest = shift;
 	
 	create_file($file);
-
-
+	my $id = get_id($file);
+	
+	my $sth = $dbh->prepare("INSERT INTO symlinks VALUES(?,?)");
+	return $sth->execute($id, $dest);
 }
 
 # Get the target/destination of a symlink
@@ -133,7 +135,20 @@ sub get_symlink {
 	return $res->[0];
 }
 
+# Delete a symlink
 sub del_symlink {
+	my $file = shift;
+	
+	my $id = get_id($file);
+	
+	my $sth = $dbh->prepare("DELETE FROM symlinks WHERE id=?");
+	$sth->execte($id);
+
+	$sth = $dbh->prepare("DELETE FROM permissions WHERE id=?");
+	$sth->execte($id);
+
+	$sth = $dbh->prepare("DELETE FROM files WHERE id=?");
+	$sth->execte($id);
 }
 
 sub checklock {
