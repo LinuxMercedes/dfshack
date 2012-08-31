@@ -94,6 +94,11 @@ sub get_id {
 	return $id_row->[0];
 }
 
+# Determine if this file already exists
+sub is_file {
+	return defined get_id(shift);
+}
+
 # Add a file to the DB if it doesn't already exist
 sub create_file {
 	my $file = shift;
@@ -140,6 +145,7 @@ sub del_symlink {
 	my $file = shift;
 	
 	my $id = get_id($file);
+	return unless defined $id;
 	
 	my $sth = $dbh->prepare("DELETE FROM symlinks WHERE id=?");
 	$sth->execte($id);
@@ -400,22 +406,27 @@ sub err {
 	return (-shift || -$!);
 }
 
+# Reads a symlink
 sub d_readlink {
 	my $file = shift;
 	debug("d_readlink: " . $file);
-	my $rv  = readlinks();
 
-# fail on readlinks() error
-	if($rv) {
-		$! = $rv;
-		return undef;
-	}
-
-	$rv = $symlinks{$file};
+	my $rv = get_symlink($file);
+#	my $rv  = readlinks();
+#
+## fail on readlinks() error
+#	if($rv) {
+#		$! = $rv;
+#		return undef;
+#	}
+#
+#	$rv = $symlinks{$file};
 	$! = -ENOENT() unless $rv; # Is this right?
 	return $rv;
 }
 
+# Deletes a symlink
+# Also deletes regular links?
 sub d_unlink {
 	my $file = shift;
 	debug("d_unlink: " . $file);
@@ -427,9 +438,13 @@ sub d_unlink {
 		writepermissions();
 	}
 
-	if(delete $symlinks{$file}) {
-		writelinks();
-		return 0;
+#	if(delete $symlinks{$file}) {
+#		writelinks();
+#		return 0;
+#	}
+
+	if(is_symlink($file)) {
+		del_symlink($file);
 	}
 
 	local $!;
@@ -445,19 +460,22 @@ sub d_symlink {
 	
 	return 0 if readlinks();
 
-	if(-e fixup($new) || $symlinks{$new}) {
+	if(-e fixup($new) || is_file($new)) {
 		debug("d_symlink: $new exists");
 		return 0; #fail
 	}
 
-	$symlinks{$new} = $old;
-	my $rv = writelinks();
-	if($rv) {
-		debug("d_symlink: failed to write link file");
-		delete $symlinks{$new};
-		return 0;
-	}
+#	$symlinks{$new} = $old;
+#	my $rv = writelinks();
+#	if($rv) {
+#		debug("d_symlink: failed to write link file");
+#		delete $symlinks{$new};
+#		return 0;
+#	}
 
+	my $rv = make_symlink($new, $old);
+	print "d_symlink return: $rv" if defined $rv;
+	return 0 if defined $rv; # Failed to write
 	debug("d_symlink: success!");
 
 	return undef;
