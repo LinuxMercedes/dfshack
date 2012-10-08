@@ -278,6 +278,9 @@ sub readpermissions {
 
 sub debug {
 	my $string = shift;
+	my $line = (caller(1))[2];
+	my $sub = (caller(1))[3];
+	print $line . ":" . $sub . ": "; 
 	print $string . "\n" if($extraopts{'debug'} && $string);
 	print "nothing to print here\n" if($extraopts{'debug'}) && !$string;
 }
