@@ -68,13 +68,13 @@ sub db_create {
 
 	debug("Create sqlitedb");
 
-	$sth = $dbh->prepare("CREATE TABLE files(id INTEGER PRIMARY KEY ASC, fullname TEXT UNIQUE NOT NULL, dirname TEXT NOT NULL, filename TEXT NOT NULL)");
+	$sth = $dbh->prepare("CREATE TABLE IF NOT EXISTS files(id INTEGER PRIMARY KEY ASC, fullname TEXT UNIQUE NOT NULL, dirname TEXT NOT NULL, filename TEXT NOT NULL)");
 	$sth->execute();
 
-	$sth = $dbh->prepare("CREATE TABLE permissions(id INTEGER PRIMARY KEY, perms INTEGER NOT NULL)");
+	$sth = $dbh->prepare("CREATE TABLE IF NOT EXISTS permissions(id INTEGER PRIMARY KEY, perms INTEGER NOT NULL)");
 	$sth->execute();
 
-	$sth = $dbh->prepare("CREATE TABLE symlinks(id INTEGER PRIMARY KEY, dest TEXT NOT NULL)");
+	$sth = $dbh->prepare("CREATE TABLE IF NOT EXISTS symlinks(id INTEGER PRIMARY KEY, dest TEXT NOT NULL)");
 	$sth->execute();
 }
 
@@ -753,7 +753,7 @@ if(! -d $dfsmount ) {
 
 is_mounted() and die "$mountpoint is already mounted!\n";
 
-daemonize();
+$extraopts{'debug'} or daemonize();
 
 if(! -d fixup($datadir)) {
 	mkdir(fixup($datadir), 0777);
