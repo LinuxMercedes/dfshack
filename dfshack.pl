@@ -300,9 +300,9 @@ sub d_getattr {
 	return -$! if readlinks();
 	return -$! if readpermissions();
 
-	if(my $link = $symlinks{$file}) {
+	if(my $link = get_symlink($file)) {
 		debug("d_getattr: is symlink");
-		@stats = lstat(fixup(catfile($datadir, "symlinks")));
+		@stats = lstat(fixup(catfile($datadir, "sqlitedb")));
 
 		my $linkfile = fixup(catfile(dirname($file), $file));
 		if(-e $linkfile) {
