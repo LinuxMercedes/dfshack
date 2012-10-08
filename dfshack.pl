@@ -103,7 +103,7 @@ sub is_file {
 sub create_file {
 	my $file = shift;
 	my $dirname = dirname($file);
-	my $filename = basehame($file);
+	my $filename = basename($file);
 
 	my $sth = $dbh->prepare("INSERT INTO files VALUES (NULL, ?, ?, ?)");
 	return $sth->execute($file, $dirname, $filename);
