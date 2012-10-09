@@ -85,6 +85,7 @@ sub db_import {
 # Get the DB id of a file
 sub get_id {
 	my $file = shift;
+	debug($file);
 
 	my $sth = $dbh->prepare("SELECT id FROM files WHERE fullname=?");
 	$sth->execute($file);
@@ -96,12 +97,15 @@ sub get_id {
 
 # Determine if this file already exists
 sub is_file {
-	return defined get_id(shift);
+	my $file = shift;
+	debug($file);
+	return defined get_id($file);
 }
 
 # Add a file to the DB if it doesn't already exist
 sub create_file {
 	my $file = shift;
+	debug($file);
 	my $dirname = dirname($file);
 	my $filename = basename($file);
 
