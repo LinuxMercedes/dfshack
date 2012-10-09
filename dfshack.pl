@@ -161,6 +161,21 @@ sub del_symlink {
 	$sth->execte($id);
 }
 
+# Get all symlinks in a directory
+sub get_dir_symlinks {
+	my $dir = shift;
+	debug($dir);
+
+	my $sth = $dbh->prepare("SELECT filename FROM symlinks INNER JOIN files  ON files.id = symlinks.id WHERE dirname=?");
+	$sth->execute($dir);
+	my @names;
+	while(my $res = $sth->fetch) {
+		push(@names, $res->[0]);
+	}
+	
+	return @names;
+}
+
 sub checklock {
 	my $lock = shift;
 	my $lockfile = fixup(catfile($datadir, ".$lock"));
@@ -352,6 +367,7 @@ sub d_getdir {
 		push(@files, basename($k)) if($k =~ /^$dirname\Q${\SL}\E?[^\q${\SL}\E]+$/);
 	}
 
+	push(@files, get_dir_symlinks($dirname));
 	return (@files, 0);
 }
 
