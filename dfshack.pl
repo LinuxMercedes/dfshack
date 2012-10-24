@@ -113,6 +113,30 @@ sub create_file {
 	return $sth->execute($file, $dirname, $filename);
 }
 
+# Move a file based on the name
+sub move_file {
+	my $src = shift;
+	my $dest = shift;
+	debug($src);
+	debug($dest);
+
+	my $id = get_id($src);
+	if($id == undef) {
+		#create_file($dest); Not sure if want
+		return 1;
+	}
+
+	my $sth = $dbh->prepare("UPDATE files SET fullname=?, dirname=?, filename=? WHERE id=?");
+	return $sth->execute($dest, dirname($dest), basename($dest), $id);
+}
+
+# Move all files in a directory
+sub move_dir {
+	my $dir = shift;
+	debug($dir);
+	
+}
+		
 # Determine if a file is a symlink
 sub is_symlink {
 	return defined get_symlink(shift);
@@ -543,11 +567,9 @@ sub d_rename {
 		$permissions{$new} = delete $permissions{$old};
 	}
 	
-	if($symlinks{$old}) {
-		$symlinks{$new} = delete $symlinks{$old};
-		$ret = 0;
-	}
-	else {
+	move_file($old, $new);
+
+	if(-f fixup($old)){
 		$ret = rename(fixup($old), fixup($new)) ? 0 : -ENOENT();
 	}
 
