@@ -149,9 +149,25 @@ sub move_file {
 
 # Move all files in a directory
 sub move_dir {
-	my $dir = shift;
-	debug($dir);
-	
+	my $src = shift;
+	my $dest = shift;
+	debug($src);
+	debug($dest);
+
+	my $sth = $dbh->prepare("SELECT * FROM files WHERE dirname LIKE ?");
+	$sth->execute($src . "%");
+
+	my @files;
+	my $up = $dbh->prepare("UPDATE files SET fullname=?, dirname=? WHERE id=?");
+	while(my $res = $sth->fetch) {
+		debug("fetch: " . $res->[1]);
+		if($res->[2] =~ /^$src(\Q${\SL}\E.+|)$/) {
+			my $dirname = catdir($dest, $1);
+			my $fullname = catfile($dirname, $res->[3]);
+			$up->execute($fullname, $dirname, $res->[0]);
+			debug("matched! " . $fullname);
+		}
+	}
 }
 		
 # Determine if a file is a symlink
@@ -547,12 +563,13 @@ sub d_rename {
 	return $rv if $rv = readpermissions();
 
 	if(-d fixup($old)) {
-		foreach my $file (keys %symlinks) {
-			debug("d_rename: " . $file);
-			if($file =~ /^$old\Q${\SL}\E(.+)/) {
-				$symlinks{catfile($new, $1)} = delete $symlinks{$file};
-			}
-		}
+#		foreach my $file (keys %symlinks) {
+#			debug("d_rename: " . $file);
+#			if($file =~ /^$old\Q${\SL}\E(.+)/) {
+#				$symlinks{catfile($new, $1)} = delete $symlinks{$file};
+#			}
+#		}
+		move_dir($old, $new);
 		foreach my $file (keys %permissions) {
 			# match both files in the directory and the directory itself.
 			if($file =~ /^$old\Q${\SL}\E(.+|)/) { 
