@@ -113,6 +113,23 @@ sub create_file {
 	return $sth->execute($file, $dirname, $filename);
 }
 
+# Delete a file
+sub del_file {
+	my $file = shift;
+	
+	my $id = get_id($file);
+	return unless defined $id;
+	
+	my $sth = $dbh->prepare("DELETE FROM symlinks WHERE id=?");
+	$sth->execute($id);
+
+	$sth = $dbh->prepare("DELETE FROM permissions WHERE id=?");
+	$sth->execute($id);
+
+	$sth = $dbh->prepare("DELETE FROM files WHERE id=?");
+	$sth->execute($id);
+}
+
 # Move a file based on the name
 sub move_file {
 	my $src = shift;
@@ -166,23 +183,6 @@ sub get_symlink {
 	my $res = $sth->fetch;
 	return undef unless defined $res;
 	return $res->[0];
-}
-
-# Delete a symlink
-sub del_symlink {
-	my $file = shift;
-	
-	my $id = get_id($file);
-	return unless defined $id;
-	
-	my $sth = $dbh->prepare("DELETE FROM symlinks WHERE id=?");
-	$sth->execte($id);
-
-	$sth = $dbh->prepare("DELETE FROM permissions WHERE id=?");
-	$sth->execte($id);
-
-	$sth = $dbh->prepare("DELETE FROM files WHERE id=?");
-	$sth->execte($id);
 }
 
 # Get all symlinks in a directory
@@ -490,9 +490,7 @@ sub d_unlink {
 #		return 0;
 #	}
 
-	if(is_symlink($file)) {
-		del_symlink($file);
-	}
+	del_file($file);
 
 	local $!;
 	unlink(fixup($file));
