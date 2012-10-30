@@ -138,7 +138,7 @@ sub move_file {
 	debug($dest);
 
 	my $id = get_id($src);
-	if($id == undef) {
+	if(!defined($id)) {
 		#create_file($dest); Not sure if want
 		return 1;
 	}
@@ -567,7 +567,7 @@ sub d_rename {
 	
 	move_file($old, $new);
 
-	if(-f fixup($old)){
+	if(-e fixup($old)){
 		$ret = rename(fixup($old), fixup($new)) ? 0 : -ENOENT();
 	}
 
