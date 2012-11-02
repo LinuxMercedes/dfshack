@@ -427,13 +427,17 @@ sub d_getattr {
 		debug("d_getattr: is regular file");
 
 		@stats = lstat(fixup($file));
-	}
-
-	if($permissions{$file}) {
-		debug("d_getattr: modifying permissions");
-		$stats[2] = (($stats[2] & !S_IRWXU) | $permissions{$file});
-	}
 		
+		if(-e fixup($file) && (my $perm = get_permissions($file))) {
+			debug("Modifying permissions");
+			$stats[2] = (($stats[2] & !S_IRWXU) | $perm);
+		}
+		# Handle the case of a file getting deleted outside of dfshack
+		elsif(!-e fixup($file) && is_file($file)) {
+			del_file($file);
+		}
+	}
+	
 	return -$! unless @stats;
 	return @stats;
 }
@@ -544,9 +548,9 @@ sub d_unlink {
 	return -$! if readlinks();
 	return -$! if readpermissions();
 
-	if(delete $permissions{$file}) {
-		writepermissions();
-	}
+#	if(delete $permissions{$file}) {
+#		writepermissions();
+#	}
 
 #	if(delete $symlinks{$file}) {
 #		writelinks();
@@ -625,9 +629,9 @@ sub d_rename {
 		}
 	}
 
-	if($permissions{$old}) {
-		$permissions{$new} = delete $permissions{$old};
-	}
+#	if($permissions{$old}) {
+#		$permissions{$new} = delete $permissions{$old};
+#	}
 	
 	move_file($old, $new);
 
@@ -667,7 +671,9 @@ sub d_chmod {
 		return $rv;
 	}
 
-	$permissions{$file} = $mode;
+	#$permissions{$file} = $mode;
+
+	set_permissions($file, $mode);
 
 	$rv = writepermissions();
 
@@ -721,7 +727,8 @@ sub d_mknod {
 		open(my $fh, '>', fixup($file)) or return -$!;
 		print $fh '';
 		close $fh;
-		$permissions{$file} = $modes;
+#		$permissions{$file} = $modes;
+		set_permissions($file, $modes);
 		writepermissions();
 		return 0;
 	}
