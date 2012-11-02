@@ -216,6 +216,53 @@ sub get_dir_symlinks {
 	return @names;
 }
 
+# Get permissions for a file
+sub get_permissions {
+	my $file = shift;
+	debug($file);
+	
+	my $id = get_id($file);
+	return undef unless $id;
+
+	my $sth = $dbh->prepare("SELECT perms FROM permissions WHERE id=?");
+	$sth->execute($id);
+	
+	my $res = $sth->fetch;
+	return undef unless $res;
+	return $res->[0];
+}
+
+# Set permissions for a file
+sub set_permissions {
+	my $file = shift;
+	my $perms = shift;
+	debug($file);
+	
+	my $id = get_id($file);
+	if($id == undef) {
+		create_file($file);
+	}
+	$id = get_id($file);
+
+	my $sth = $dbh->prepare("INSERT OR REPLACE INTO permissions VALUES(?,?)");
+	return $sth->execute($id, $perms);
+}
+
+# Get permissions for all files in a directory
+sub get_dir_permissions {
+	my $dir = shift;
+	debug($dir);
+	my $sth = $dbh->prepare("SELECT files.filename, permissions.perms FROM permissions INNER JOIN files ON files.id = permissions.id WHERE files.dirname=?");
+	
+	$sth->execute($dir);
+	my %perms;
+	while(my $res = $sth->fetch) {
+		$perms{$res->[0]} = $res->[1];
+	}
+
+	return %perms;
+}
+
 sub checklock {
 	my $lock = shift;
 	my $lockfile = fixup(catfile($datadir, ".$lock"));
