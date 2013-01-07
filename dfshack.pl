@@ -290,7 +290,7 @@ sub readfile {
 
 	my $filename = fixup(catfile($datadir, "$readtype"));
 	
-	debug("readfile: " . $filename);
+	debug($filename);
 
 # No symlinks file -- we have nothing to read!
 	if(! -e $filename) {
@@ -341,7 +341,7 @@ sub writefile {
 
 	my $filename = fixup(catfile($datadir, "$writetype"));
 
-	debug("writefile: " . $filename);
+	debug($filename);
 
 	my $rv = checklock($writetype);
 	return $rv if $rv;
@@ -400,14 +400,14 @@ sub d_getattr {
 	my $file = shift;
 	my @stats;
 
-	debug("d_getattr: " . $file);
+	debug($file);
 
 	# Update cached data
 	return -$! if readlinks();
 	return -$! if readpermissions();
 
 	if(my $link = get_symlink($file)) {
-		debug("d_getattr: is symlink");
+		debug("is symlink");
 		@stats = lstat(fixup(catfile($datadir, "sqlitedb")));
 
 		my $linkfile = fixup(catfile(dirname($file), $file));
@@ -424,7 +424,7 @@ sub d_getattr {
 		$stats[2] = (($stats[2] & !S_IFREG) | S_IFLNK);
 	}
 	else {
-		debug("d_getattr: is regular file");
+		debug("is regular file");
 
 		@stats = lstat(fixup($file));
 		
@@ -444,7 +444,7 @@ sub d_getattr {
 
 sub d_getdir {
 	my $dirname = shift;
-	debug("d_getdir: " . $dirname);
+	debug($dirname);
 
 	return -EAGAIN() if readlinks();
 
@@ -454,7 +454,7 @@ sub d_getdir {
 	closedir($dir);
 
 	foreach my $k (keys(%symlinks)) {
-		debug("d_getdir link: " . $k);
+		debug("link: " . $k);
 		push(@files, basename($k)) if($k =~ /^$dirname\Q${\SL}\E?[^\q${\SL}\E]+$/);
 	}
 
@@ -465,7 +465,7 @@ sub d_getdir {
 sub d_open {
 	my $file = shift;
 	my $mode = shift;
-	debug("d_open: " . $file);
+	debug($file);
 
 	sysopen(my $fh, fixup($file), $mode) || return -$!;
 
@@ -479,7 +479,7 @@ sub d_read {
 	my $offset = shift;
 	my $rv = -ENOSYS();
 
-	debug("d_read: " . $file);
+	debug($file);
 
 	$file = fixup($file);
 
@@ -500,7 +500,7 @@ sub d_write {
 	my $buf = shift;
 	my $off = shift;
 	my $rv;
-	debug("d_write: " . $file);
+	debug($file);
 	
 	$file = fixup($file);
 	
@@ -523,7 +523,7 @@ sub err {
 # Reads a symlink
 sub d_readlink {
 	my $file = shift;
-	debug("d_readlink: " . $file);
+	debug($file);
 
 	my $rv = get_symlink($file);
 #	my $rv  = readlinks();
@@ -543,7 +543,7 @@ sub d_readlink {
 # Also deletes regular links?
 sub d_unlink {
 	my $file = shift;
-	debug("d_unlink: " . $file);
+	debug($file);
 	
 	return -$! if readlinks();
 	return -$! if readpermissions();
@@ -568,12 +568,12 @@ sub d_symlink {
 	my $old = shift;
 	my $new = shift;
 
-	debug("d_symlink: " . $old . " " . $new);
+	debug($old . " " . $new);
 	
 	return 0 if readlinks();
 
 	if(-e fixup($new) || is_file($new)) {
-		debug("d_symlink: $new exists");
+		debug("$new exists");
 		return 0; #fail
 	}
 
@@ -586,9 +586,8 @@ sub d_symlink {
 #	}
 
 	my $rv = make_symlink($new, $old);
-	print "d_symlink return: $rv" if defined $rv;
 	return 0 if defined $rv; # Failed to write
-	debug("d_symlink: success!");
+	debug("success!");
 
 	return undef;
 }
@@ -597,7 +596,7 @@ sub d_link {
 	my $old = shift;
 	my $new = shift;
 
-	debug("d_link: " . $old . ' ' . $new);
+	debug($old . ' ' . $new);
 
 	return link(fixup($old), fixup($new)) ? 0 : -$!;
 }
@@ -605,7 +604,7 @@ sub d_link {
 sub d_rename {
 	my $old = shift;
 	my $new = shift;
-	debug("d_rename: " . $old . " " . $new);
+	debug($old . " " . $new);
 
 	my $rv; 
 	my $ret;
@@ -650,12 +649,12 @@ sub d_chown {
 	my $uid = shift;
 	my $gid = shift;
 	
-	debug("d_chown: " . $file);
+	debug($file);
 
 	$file = fixup($file);
 
 	local $!;
-	debug("d_chown: no file $file") unless -e $file;
+	debug("no file $file") unless -e $file;
 	lchown($uid, $gid, $file);
 
 	return -$!;
@@ -664,7 +663,7 @@ sub d_chown {
 sub d_chmod {
 	my $file = shift;
 	my $mode = shift;
-	debug("d_chmod: " . $file);
+	debug($file);
 
 	my $rv = readpermissions();
 	if($rv) {
@@ -684,7 +683,7 @@ sub d_chmod {
 sub d_truncate {
 	my $file = shift;
 	my $length = shift;
-	debug("d_truncate: " . $file);
+	debug($file);
 
 	return truncate(fixup($file), $length) ? 0 : -$!;
 }
@@ -693,7 +692,7 @@ sub d_utime {
 	my $file = shift;
 	my $atime = shift;
 	my $utime = shift;
-	debug("d_utime: " . $file);
+	debug($file);
 	
 	return utime($atime, $utime, fixup($file)) ? 0 : -$!;
 }
@@ -701,14 +700,14 @@ sub d_utime {
 sub d_mkdir {
 	my $file = fixup(shift);
 	my $perm = shift;
-	debug("d_mkdir: " . $file);
+	debug($file);
 
 	return mkdir($file, $perm) ? 0 : -$!;
 }
 
 sub d_rmdir {
 	my $file = fixup(shift);
-	debug("d_rmdir: " . $file);
+	debug($file);
 
 	return rmdir($file) ? 0 : -$!;
 }
@@ -718,7 +717,7 @@ sub d_mknod {
 	my $modes = shift;
 	my $dev = shift;
 
-	debug("d_mknod: " . $file);
+	debug($file);
 	undef $!;
 
 	return -EAGAIN() if readpermissions();
@@ -860,13 +859,12 @@ sub daemonize {
 }
 
 sub is_mounted {
-	debug("checkmounts");
 	if((stat($mountpoint))[0] == (stat(File::Spec->catdir($mountpoint, '..')))[0]) {
-		debug("checkmounts: not mounted");
+		debug("not mounted");
 		return undef;
 	}
 	else {
-		debug("checkmounts: $mountpoint already mounted");
+		debug("$mountpoint already mounted");
 		return 1;
 	}
 }
