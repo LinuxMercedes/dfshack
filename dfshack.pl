@@ -60,7 +60,7 @@ sub db_connect {
 
 sub db_disconnect {
 	debug("Disconnect from sqlitedb");
-	return shift->disconnect;
+	return shift->disconnect();
 }
 
 sub db_create {
