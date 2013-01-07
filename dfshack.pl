@@ -752,69 +752,91 @@ sub d_statfs {
 
 # Implement this stuff
 sub d_flush {
+	debug(shift);
 }
 
 sub d_release {
+	debug(shift);
 }
 
 sub d_fsync {
+	debug(shift);
 }
 
 sub d_setxattr {
+	debug(shift);
 }
 
 sub d_getxattr {
+	debug(shift);
 }
 
 sub d_listxattr {
+	debug(shift);
 }
 
 sub d_removexattr {
+	debug(shift);
 }
 
 sub d_opendir {
+	debug(shift);
 }
 
 sub d_readdir {
+	debug(shift);
 }
 
 sub d_releasedir { 
+	debug(shift);
 }
 
 sub d_fsyncdir {
+	debug(shift);
 }
 
 sub d_init {
+	debug(shift);
 }
 
 sub d_destroy {
+	debug(shift);
 }
 
 sub d_access {
+	debug(shift);
 }
 
 sub d_create {
+	debug(shift);
 }
 
 sub d_ftruncate {
+	debug(shift);
 }
 
 sub d_fgetattr {
+	debug(shift);
 }
 
 sub d_lock {
+	debug(shift);
 }
 
 sub d_utimens {
+	debug(shift);
 }
 
 sub d_bmap {
+	debug(shift);
 }
 
 sub d_ioctl {
+	debug(shift);
 }
 
 sub d_poll {
+	debug(shift);
 }
 
 #from http://perldoc.perl.org/perlipc.html#Complete-Dissociation-of-Child-from-Parent
@@ -896,6 +918,27 @@ Fuse::main(
 		'read' => 'main::d_read',
 		'write' => 'main::d_write',
 		'statfs' => 'main::d_statfs',
+#		'flush' => 'main::d_flush',
+##		'release' => 'main::d_release',
+#		'fsync' => 'main::d_fsync',
+#		'setxattr' => 'main::d_setxattr',		
+#		'getxattr' => 'main::d_getxattr',
+#		'listxattr' => 'main::d_listxattr',
+#		'removexattr' => 'main::d_removexattr',
+#		'opendir' => 'main::d_opendir',
+#		'readdir' => 'main::d_readdir',
+#		'releasedir' => 'main::d_releasedir',
+#		'fsyncdir' => 'main::d_fsyncdir',
+#		'init' => 'main::d_init',
+#		'destroy' => 'main::d_destroy',
+#		'access' => 'main::d_access',
+#		'create' => 'main::d_create',
+#		'ftruncate' => 'main::d_ftruncate',
+##		'lock' => 'main::d_lock',
+#		'utimens' => 'main::d_utimens',
+#		'bmap' => 'main::d_bmap',
+#		'ioctl' => 'main::d_ioctl',
+#		'poll' => 'main::d_poll',
 		%extraopts,
 		);
 
