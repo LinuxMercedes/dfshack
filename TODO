@@ -1,0 +1,7 @@
+* Locking/file semaphore for the sqlite database
+	 * CIFS renames are NOT atomic
+	 * CIFS DOES support some flock/fcntl locking mechanisms
+* Version table for the database (to help with future dfshack versions)
+* old symlinks/permissions file import 
+* Fix lock bug (testable by lock_test.c)
+	* d_flush() may need to be implemented as part of the fix
