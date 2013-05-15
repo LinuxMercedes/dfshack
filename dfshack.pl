@@ -79,7 +79,11 @@ sub db_create {
 }
 
 sub db_import {
+# haha right
+}
 
+sub get_db {
+# some crap
 }
 
 # Get the DB id of a file
@@ -268,10 +272,10 @@ sub checklock {
 	my $lockfile = fixup(catfile($datadir, ".$lock"));
 
 	my $start = [gettimeofday];
-	my $elapsed = $start;
+	my $elapsed = 0;
 
 	while((-e $lockfile) && $elapsed < 5) {
-		print $elapsed . "\n";
+		debug($elapsed);
 		usleep(10_000); #Wait for .1 second
 		$elapsed = tv_interval($start);
 	}
@@ -386,9 +390,13 @@ sub debug {
 	my $string = shift;
 	my $line = (caller(1))[2];
 	my $sub = (caller(1))[3];
+
+	local $| = 1;
+
 	print $line . ":" . $sub . ": "; 
 	print $string . "\n" if($extraopts{'debug'} && $string);
 	print "nothing to print here\n" if($extraopts{'debug'}) && !$string;
+
 }
 
 sub fixup {
@@ -749,11 +757,14 @@ sub d_statfs {
 	return (statvfs($dfsmount))[1,2,3,5,6,9]; #from perl-fuse unit test
 }
 
-# Implement this stuff
 sub d_flush {
 	debug(shift);
+	debug(shift);
+
+	return 0;
 }
 
+#TODO
 sub d_release {
 	debug(shift);
 }
@@ -818,6 +829,7 @@ sub d_fgetattr {
 	debug(shift);
 }
 
+#TODO
 sub d_lock {
 	debug(shift);
 }
@@ -916,8 +928,8 @@ Fuse::main(
 		'read' => 'main::d_read',
 		'write' => 'main::d_write',
 		'statfs' => 'main::d_statfs',
-#		'flush' => 'main::d_flush',
-##		'release' => 'main::d_release',
+		'flush' => 'main::d_flush',
+#		'release' => 'main::d_release',
 #		'fsync' => 'main::d_fsync',
 #		'setxattr' => 'main::d_setxattr',		
 #		'getxattr' => 'main::d_getxattr',
@@ -932,7 +944,7 @@ Fuse::main(
 #		'access' => 'main::d_access',
 #		'create' => 'main::d_create',
 #		'ftruncate' => 'main::d_ftruncate',
-##		'lock' => 'main::d_lock',
+#		'lock' => 'main::d_lock',
 #		'utimens' => 'main::d_utimens',
 #		'bmap' => 'main::d_bmap',
 #		'ioctl' => 'main::d_ioctl',
