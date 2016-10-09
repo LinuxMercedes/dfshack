@@ -565,7 +565,7 @@ if(! -d $dfsmount ) {
 
 is_mounted() and die "$mountpoint is already mounted!\n";
 
-daemonize();
+$extraopts{'debug'} or daemonize();
 
 if(! -d fixup($datadir)) {
 	mkdir(fixup($datadir), 0777);
