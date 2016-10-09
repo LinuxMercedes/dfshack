@@ -209,11 +209,21 @@ sub d_getattr {
 		debug("d_getattr: is regular file");
 
 		@stats = lstat(fixup($file));
+		debug("d_getattr: lstat returned nothing") unless @stats;
 	}
 
 	if($permissions{$file}) {
-		debug("d_getattr: modifying permissions");
-		$stats[2] = (($stats[2] & !S_IRWXU) | $permissions{$file});
+		if(@stats){
+			debug("d_getattr: modifying permissions");
+			$stats[2] = (($stats[2] & !S_IRWXU) | $permissions{$file});
+		}
+		else {
+			# The file was deleted outside of dfshack; fuggedaboutit
+			debug("d_getattr: file does not exist; forgetting permissions");
+			if(delete $permissions{$file}) {
+				writepermissions();
+			}
+		}
 	}
 		
 	return -$! unless @stats;
