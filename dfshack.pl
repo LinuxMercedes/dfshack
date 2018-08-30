@@ -243,7 +243,7 @@ sub d_getdir {
 
 	foreach my $k (keys(%symlinks)) {
 		debug("d_getdir link: " . $k);
-		push(@files, basename($k)) if($k =~ /^$dirname\Q${\SL}\E?[^\q${\SL}\E]+$/);
+		push(@files, basename($k)) if($k =~ /^\Q$dirname\E\Q${\SL}\E?[^\q${\SL}\E]+$/);
 	}
 
 	return (@files, 0);
@@ -393,13 +393,13 @@ sub d_rename {
 	if(-d fixup($old)) {
 		foreach my $file (keys %symlinks) {
 			debug("d_rename: " . $file);
-			if($file =~ /^$old\Q${\SL}\E(.+)/) {
+			if($file =~ /^\Q$old\E\Q${\SL}\E(.+)/) {
 				$symlinks{catfile($new, $1)} = delete $symlinks{$file};
 			}
 		}
 		foreach my $file (keys %permissions) {
 			# match both files in the directory and the directory itself.
-			if($file =~ /^$old\Q${\SL}\E(.+|)/) { 
+			if($file =~ /^\Q$old\E\Q${\SL}\E(.+|)/) { 
 				$permissions{catfile($new, $1)} = delete $permissions{$file};
 			}
 		}
